@@ -1,0 +1,39 @@
+@* SVG sparkline — area chart with line, auto-scaled to min/max of the data. *@
+
+@if (Points is { Count: >= 2 })
+{
+    var w    = 100.0;
+    var h    = 28.0;
+    var min  = (double)Points.Min();
+    var max  = (double)Points.Max();
+    var rng  = max == min ? 1.0 : max - min;
+    var n    = Points.Count;
+
+    // Map a data point to SVG coordinates
+    string X(int i)  => ((double)i / (n - 1) * w).ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+    string Y(decimal p) => (h - (double)(p - (decimal)min) / rng * h * 0.85 - h * 0.075)
+                           .ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+
+    var linePoints = string.Join(" ", Points.Select((p, i) => $"{X(i)},{Y(p)}"));
+    var areaPath   = $"M {X(0)},{Y(Points[0])} " +
+                     string.Join(" ", Points.Select((p, i) => $"L {X(i)},{Y(p)}")) +
+                     $" L {X(n - 1)},{h} L {X(0)},{h} Z";
+
+    var stroke    = IsPositive ? "#10b981" : "#ef4444";
+    var fillColor = IsPositive ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.12)";
+
+    <svg class="sparkline" viewBox="0 0 100 28" preserveAspectRatio="none">
+        <path d="@areaPath" fill="@fillColor" />
+        <polyline points="@linePoints"
+                  fill="none"
+                  stroke="@stroke"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round" />
+    </svg>
+}
+
+@code {
+    [Parameter, EditorRequired] public List<decimal> Points { get; set; } = null!;
+    [Parameter] public bool IsPositive { get; set; } = true;
+}

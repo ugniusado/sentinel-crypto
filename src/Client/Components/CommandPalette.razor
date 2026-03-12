@@ -1,0 +1,94 @@
+@inject DashboardStateService Dashboard
+@inject PriceStateService PriceState
+@inject IJSRuntime JS
+@implements IDisposable
+
+@if (Dashboard.CommandPaletteOpen)
+{
+    <div class="cmd-overlay" @onclick="Close">
+        <div class="cmd-modal" @onclick:stopPropagation>
+            <div class="cmd-search-row">
+                <span class="cmd-icon">⌕</span>
+                <input class="cmd-input"
+                       id="cmd-input"
+                       placeholder="Search coin... (ESC to close)"
+                       @bind="_query"
+                       @bind:event="oninput" />
+                <kbd class="cmd-hint">ESC</kbd>
+            </div>
+
+            <div class="cmd-results">
+                @foreach (var coin in FilteredCoins)
+                {
+                    <div class="cmd-row @(coin.PriceChangePercent >= 0 ? "row-up" : "row-down")"
+                         @onclick="() => Select(coin)">
+                        <span class="cmd-symbol">@coin.Symbol.Replace("USDT", "")</span>
+                        <span class="cmd-price">@FormatPrice(coin.Price)</span>
+                        <span class="cmd-change">
+                            @(coin.PriceChangePercent >= 0 ? "▲" : "▼")
+                            @Math.Abs(coin.PriceChangePercent).ToString("F2")%
+                        </span>
+                        @if (coin.IsPanic)
+                        {
+                            <span class="cmd-badge-panic">HIGH VOL</span>
+                        }
+                    </div>
+                }
+                @if (!FilteredCoins.Any())
+                {
+                    <div class="cmd-empty">No coins match "@_query"</div>
+                }
+            </div>
+
+            <div class="cmd-footer">
+                <span><kbd>1</kbd>–<kbd>4</kbd> switch view</span>
+                <span><kbd>⌘K</kbd> toggle palette</span>
+                <span>@PriceState.Coins.Count assets live</span>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string _query = "";
+
+    private IEnumerable<CoinModel> FilteredCoins =>
+        PriceState.OrderedCoins
+            .Where(c => string.IsNullOrEmpty(_query) ||
+                        c.Symbol.Contains(_query.ToUpperInvariant()))
+            .Take(8);
+
+    protected override void OnInitialized()
+        => Dashboard.OnStateChanged += OnStateChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Dashboard.CommandPaletteOpen)
+            await JS.InvokeVoidAsync("SentinelCrypto.focusSelector", "#cmd-input");
+    }
+
+    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+
+    private void Select(CoinModel coin)
+    {
+        // Ensure the "All" view is active so the coin is visible
+        Dashboard.SetView(ViewMode.All);
+        Dashboard.CloseCommandPalette();
+        _query = "";
+    }
+
+    private void Close()
+    {
+        Dashboard.CloseCommandPalette();
+        _query = "";
+    }
+
+    private static string FormatPrice(decimal p) => p switch
+    {
+        >= 1000 => p.ToString("N2"),
+        >= 1    => p.ToString("N4"),
+        _       => p.ToString("N6")
+    };
+
+    public void Dispose() => Dashboard.OnStateChanged -= OnStateChanged;
+}

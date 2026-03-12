@@ -1,0 +1,69 @@
+version: "3.9"
+
+services:
+
+  # ── ASP.NET Core API + SignalR ───────────────────────────────────────────
+  server:
+    build:
+      context: .
+      dockerfile: src/Server/Dockerfile
+    container_name: sentinel-server
+    ports:
+      - "5000:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Redis: "redis:6379"
+      Cors__AllowedOrigins__0: "http://localhost:3000"
+      Cors__AllowedOrigins__1: "http://localhost:5173"
+      Otlp__Endpoint: "http://jaeger:4317"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - sentinel-net
+
+  # ── Redis (SignalR backplane) ─────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: sentinel-redis
+    command: redis-server --save 60 1 --loglevel warning
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - sentinel-net
+
+  # ── Jaeger (distributed tracing) ─────────────────────────────────────────
+  jaeger:
+    image: jaegertracing/all-in-one:1.56
+    container_name: sentinel-jaeger
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC receiver
+      - "4318:4318"     # OTLP HTTP receiver
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    restart: unless-stopped
+    networks:
+      - sentinel-net
+
+volumes:
+  redis-data:
+
+networks:
+  sentinel-net:
+    driver: bridge

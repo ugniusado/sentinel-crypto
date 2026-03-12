@@ -1,0 +1,45 @@
+@* Registers global keyboard shortcuts via JS interop.
+   Placed inside MainLayout so it lives for the full app lifetime. *@
+
+@inject IJSRuntime JS
+@inject DashboardStateService Dashboard
+@implements IAsyncDisposable
+
+@code {
+    private DotNetObjectReference<GlobalShortcuts>? _ref;
+    private IJSObjectReference? _handle;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _ref    = DotNetObjectReference.Create(this);
+        _handle = await JS.InvokeAsync<IJSObjectReference>("SentinelCrypto.registerShortcuts", _ref);
+    }
+
+    [JSInvokable]
+    public void ToggleCommandPalette()
+    {
+        if (Dashboard.CommandPaletteOpen) Dashboard.CloseCommandPalette();
+        else                              Dashboard.OpenCommandPalette();
+    }
+
+    [JSInvokable]
+    public void OnEscape() => Dashboard.CloseCommandPalette();
+
+    [JSInvokable]
+    public void SetView(int index)
+    {
+        if (Enum.IsDefined(typeof(ViewMode), index))
+            Dashboard.SetView((ViewMode)index);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_handle is not null)
+        {
+            try { await JS.InvokeVoidAsync("SentinelCrypto.disposeHandle", _handle); } catch { }
+            await _handle.DisposeAsync();
+        }
+        _ref?.Dispose();
+    }
+}

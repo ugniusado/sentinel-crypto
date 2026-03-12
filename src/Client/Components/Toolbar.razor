@@ -1,0 +1,77 @@
+@inject DashboardStateService Dashboard
+@inject PriceStateService PriceState
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div class="toolbar">
+    @* ── View tabs ─────────────────────────────────────────────────────── *@
+    <div class="toolbar-views">
+        @foreach (var (label, mode, key) in Views)
+        {
+            <button class="view-btn @(Dashboard.CurrentView == mode ? "active" : "")"
+                    @onclick="() => Dashboard.SetView(mode)">
+                @label
+                <kbd class="view-key">@key</kbd>
+            </button>
+        }
+    </div>
+
+    @* ── Toggles ───────────────────────────────────────────────────────── *@
+    <div class="toolbar-toggles">
+        <button class="toggle-btn @(Dashboard.HeatmapEnabled ? "active" : "")"
+                @onclick="Dashboard.ToggleHeatmap"
+                title="Toggle heatmap overlay">
+            <span>▦</span> HEATMAP
+        </button>
+
+        <button class="toggle-btn @(Dashboard.ColorMode == ColorMode.ColorBlind ? "active" : "")"
+                @onclick="ToggleColorBlind"
+                title="Toggle color-blind mode (Blue/Orange)">
+            <span>◕</span> A11Y
+        </button>
+
+        <button class="toggle-btn cmd-trigger"
+                @onclick="Dashboard.OpenCommandPalette"
+                title="Search coins (⌘K)">
+            <span>⌕</span> SEARCH
+            <kbd>⌘K</kbd>
+        </button>
+    </div>
+
+    @* ── Live stats ────────────────────────────────────────────────────── *@
+    <div class="toolbar-stats">
+        <span class="stat-chip">@PriceState.Coins.Count ASSETS</span>
+        <span class="stat-chip">@Dashboard.TotalUpdates.ToString("N0") TICKS</span>
+    </div>
+</div>
+
+@code {
+    private static readonly (string Label, ViewMode Mode, string Key)[] Views =
+    [
+        ("ALL",       ViewMode.All,         "1"),
+        ("FAVORITES", ViewMode.Favorites,   "2"),
+        ("GAINERS",   ViewMode.TopGainers,  "3"),
+        ("ALERTS",    ViewMode.PanicAlerts, "4"),
+    ];
+
+    protected override void OnInitialized()
+    {
+        Dashboard.OnStateChanged  += Refresh;
+        PriceState.OnPricesUpdated += Refresh;
+    }
+
+    private async Task ToggleColorBlind()
+    {
+        Dashboard.ToggleColorMode();
+        var on = Dashboard.ColorMode == ColorMode.ColorBlind;
+        await JS.InvokeVoidAsync("SentinelCrypto.applyBodyClass", "colorblind", on);
+    }
+
+    private void Refresh() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Dashboard.OnStateChanged   -= Refresh;
+        PriceState.OnPricesUpdated -= Refresh;
+    }
+}

@@ -1,0 +1,34 @@
+@inject CryptoSignalRService SignalR
+@implements IDisposable
+
+<div class="connection-status status-@StatusClass">
+    <span class="status-indicator"></span>
+    <span class="status-text">@StatusText</span>
+</div>
+
+@code {
+    private string StatusClass => SignalR.Status switch
+    {
+        HubStatus.Connected    => "connected",
+        HubStatus.Connecting   => "connecting",
+        HubStatus.Reconnecting => "reconnecting",
+        _                             => "disconnected"
+    };
+
+    private string StatusText => SignalR.Status switch
+    {
+        HubStatus.Connected    => "Live",
+        HubStatus.Connecting   => "Connecting...",
+        HubStatus.Reconnecting => "Reconnecting...",
+        _                             => "Disconnected"
+    };
+
+    protected override void OnInitialized()
+        => SignalR.OnStatusChanged += OnStatusChanged;
+
+    private void OnStatusChanged()
+        => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+        => SignalR.OnStatusChanged -= OnStatusChanged;
+}

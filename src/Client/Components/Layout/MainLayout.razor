@@ -1,0 +1,31 @@
+@inherits LayoutComponentBase
+@inject CryptoSignalRService SignalR
+
+<div class="sentinel-shell">
+    <header class="sentinel-header">
+        <div class="header-brand">
+            <span class="brand-icon">◈</span>
+            <span class="brand-name">SENTINEL</span>
+            <span class="brand-sub">CRYPTO</span>
+        </div>
+        <ConnectionStatus />
+        <div class="header-meta">
+            <span class="meta-label">LIVE FEED</span>
+            <span class="pulse-dot"></span>
+        </div>
+    </header>
+
+    <nav class="sentinel-toolbar">
+        <Toolbar />
+    </nav>
+
+    <main class="sentinel-main">
+        @Body
+    </main>
+</div>
+
+@* Global keyboard shortcuts — lives here for full app lifetime *@
+<GlobalShortcuts />
+
+@* CMD+K command palette overlay *@
+<CommandPalette />

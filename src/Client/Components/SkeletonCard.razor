@@ -1,0 +1,19 @@
+@* Shimmer placeholder shown while the WebSocket is connecting. *@
+
+<div class="coin-card skeleton @SizeClass">
+    <div class="skeleton-line short"></div>
+    <div class="skeleton-line long price"></div>
+    <div class="skeleton-line medium"></div>
+    <div class="skeleton-line short"></div>
+</div>
+
+@code {
+    [Parameter] public CardSize Size { get; set; } = CardSize.Small;
+
+    private string SizeClass => Size switch
+    {
+        CardSize.Large  => "card-large",
+        CardSize.Medium => "card-medium",
+        _               => "card-small"
+    };
+}

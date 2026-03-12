@@ -1,0 +1,63 @@
+@inject PriceStateService PriceState
+@inject DashboardStateService Dashboard
+@implements IDisposable
+
+@if (!_hasData)
+{
+    @* ── Skeleton shimmer ─────────────────────────────────────────────── *@
+    <div class="heatmap-grid">
+        <SkeletonCard Size="CardSize.Large" />
+        <SkeletonCard Size="CardSize.Large" />
+        @for (var i = 0; i < 3; i++) { <SkeletonCard Size="CardSize.Medium" /> }
+        @for (var i = 0; i < 5; i++) { <SkeletonCard Size="CardSize.Small"  /> }
+    </div>
+}
+else
+{
+    @* ── Live grid ────────────────────────────────────────────────────── *@
+    <div class="heatmap-grid">
+        @foreach (var coin in VisibleCoins)
+        {
+            <CoinCard Model="coin" @key="coin.Symbol" />
+        }
+        @if (!VisibleCoins.Any())
+        {
+            <div class="empty-view">No coins in this view</div>
+        }
+    </div>
+}
+
+@code {
+    private bool _hasData;
+
+    private IEnumerable<CoinModel> VisibleCoins => Dashboard.CurrentView switch
+    {
+        ViewMode.Favorites   => PriceState.OrderedCoins.Where(c => Dashboard.Favorites.Contains(c.Symbol)),
+        ViewMode.TopGainers  => PriceState.OrderedCoins.OrderByDescending(c => c.PriceChangePercent).Take(5),
+        ViewMode.PanicAlerts => PriceState.OrderedCoins.Where(c => c.IsPanic),
+        _                    => PriceState.OrderedCoins
+    };
+
+    protected override void OnInitialized()
+    {
+        PriceState.OnPricesUpdated += OnPricesUpdated;
+        Dashboard.OnStateChanged   += OnDashboardChanged;
+        _hasData = PriceState.Coins.Count > 0;
+    }
+
+    private void OnPricesUpdated()
+    {
+        _hasData = PriceState.Coins.Count > 0;
+        Dashboard.IncrementUpdates();
+        // Always re-render — CoinCard.ShouldRender() gates each card individually
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnDashboardChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        PriceState.OnPricesUpdated -= OnPricesUpdated;
+        Dashboard.OnStateChanged   -= OnDashboardChanged;
+    }
+}
