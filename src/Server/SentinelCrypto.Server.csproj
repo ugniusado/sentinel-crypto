@@ -9,6 +9,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Host the Blazor WASM client — enables single-command startup -->
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.0" />
+    <ProjectReference Include="..\Client\SentinelCrypto.Client.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- SignalR Redis backplane -->
     <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="9.0.0" />
 

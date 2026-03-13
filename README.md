@@ -90,17 +90,15 @@ Blazor WASM Client
 **Prerequisites:** .NET 9 SDK
 
 ```bash
-# Terminal 1 — API server
 cd src/Server
 dotnet run
-# → http://localhost:5000
-# → http://localhost:5000/health
-
-# Terminal 2 — Blazor WASM client
-cd src/Client
-dotnet run
-# → http://localhost:5173
+# → http://localhost:5000        (app)
+# → http://localhost:5000/health (health check)
 ```
+
+The Server hosts the Blazor WASM client directly — one command, one port, no second terminal.
+
+> **Standalone client dev** (optional): `cd src/Client && dotnet run` still works on `:5173` for frontend-only iteration.
 
 ---
 

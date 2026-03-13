@@ -104,7 +104,8 @@ app.UseHealthChecks("/health", new HealthCheckOptions
 
 app.MapHub<CryptoHub>("/hubs/crypto");
 
-// Serve static Blazor WASM files in production
+// Serve the Blazor WASM client (dev hot-reload + production static files)
+app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
 app.MapFallbackToFile("index.html");
 
