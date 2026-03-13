@@ -223,13 +223,10 @@ html, body {
 .fav-btn:hover    { color:#f59e0b; transform:scale(1.2); }
 .fav-btn.fav-active { color:#f59e0b; }
 
-/* ── Price + Ghost tick ──────────────────────────────────────────────────── */
+/* ── Price — smooth in-place colour flash (no position jitter) ──────────── */
 .price-wrapper {
-  position:relative; display:flex; align-items:center;
-  height:2.4rem; overflow:hidden;
+  display:flex; align-items:center;
 }
-.card-large .price-wrapper  { height:3.1rem; }
-.card-medium .price-wrapper { height:2.6rem; }
 
 .price-value {
   font-family:var(--font-mono); font-weight:600;
@@ -243,24 +240,18 @@ html, body {
 .price-dim { color:var(--text-3); }
 .price-sig { color:var(--text-1); font-weight:700; }
 
-.price-ghost {
-  position:absolute; left:0; top:0;
-  font-family:var(--font-mono); font-weight:600;
-  font-size:1.35rem; font-variant-numeric:tabular-nums; color:var(--text-2);
-  pointer-events:none; white-space:nowrap;
+/* Colour flash — number stays in place, only hue changes. No layout shift. */
+.price-up   { animation: flash-colour-up   500ms ease-out; }
+.price-down { animation: flash-colour-down 500ms ease-out; }
+
+@keyframes flash-colour-up {
+  0%   { color: var(--green); }
+  100% { color: var(--text-1); }
 }
-.card-large  .price-ghost { font-size:1.85rem; }
-.card-medium .price-ghost { font-size:1.5rem; }
-
-.ghost-up   { animation:ghost-exit-up   450ms ease-out forwards; }
-.ghost-down { animation:ghost-exit-down 450ms ease-out forwards; }
-@keyframes ghost-exit-up   { from{opacity:.55;transform:translateY(0)} to{opacity:0;transform:translateY(-20px)} }
-@keyframes ghost-exit-down { from{opacity:.55;transform:translateY(0)} to{opacity:0;transform:translateY(20px)} }
-
-.price-enter-up   { animation:price-from-below 220ms ease-out; }
-.price-enter-down { animation:price-from-above 220ms ease-out; }
-@keyframes price-from-below { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-@keyframes price-from-above { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+@keyframes flash-colour-down {
+  0%   { color: var(--red); }
+  100% { color: var(--text-1); }
+}
 
 /* ── Change ──────────────────────────────────────────────────────────────── */
 .card-change {

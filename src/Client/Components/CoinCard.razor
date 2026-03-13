@@ -28,15 +28,9 @@
         </div>
     </div>
 
-    @* ── Price with ghost-tick micro-animation ───────────────────────── *@
+    @* ── Price — in-place colour nudge, no position animation ─────────── *@
     <div class="price-wrapper">
-        @if (_ghostPrice > 0)
-        {
-            <span class="price-ghost ghost-@_ghostDir" @key="@($"g{_renderCount}")">
-                @FormatPrice(_ghostPrice)
-            </span>
-        }
-        <span class="price-value price-enter-@_ghostDir" @key="@($"p{_renderCount}")">
+        <span class="price-value price-@_flashDir" @key="_renderCount">
             @FormatPriceStyled(Model.Price)
         </span>
     </div>
@@ -98,27 +92,21 @@
         var significant = Model.HasSignificantChange() || Model.IsPanic != _lastRenderedPanic;
         if (!significant) return false;
 
-        // ── Ghost tick setup ─────────────────────────────────────────────
         if (_lastRenderedPrice > 0 && Model.Price != _lastRenderedPrice)
-        {
-            _ghostPrice = _lastRenderedPrice;
-            _ghostDir   = Model.Price > _lastRenderedPrice ? "up" : "down";
-        }
+            _flashDir = Model.Price > _lastRenderedPrice ? "up" : "down";
+
         _renderCount++;
         _lastRenderedPrice = Model.Price;
         _lastRenderedPanic = Model.IsPanic;
         return true;
     }
 
-    // ── Ghost tick state ──────────────────────────────────────────────────
-    private decimal _ghostPrice;
-    private string  _ghostDir = "up";
-    private int     _renderCount;
+    private string _flashDir = "up";
+    private int    _renderCount;
 
-    // ── Derived props ─────────────────────────────────────────────────────
+    // ── Helpers ──────────────────────────────────────────────────────────
     private string ShortSymbol => Model.Symbol.Replace("USDT", "");
-
-    private bool IsFavorite => Dashboard.Favorites.Contains(Model.Symbol);
+    private bool   IsFavorite  => Dashboard.Favorites.Contains(Model.Symbol);
 
     private void ToggleFavorite()
     {
@@ -127,33 +115,29 @@
         StateHasChanged();
     }
 
-    private string SizeClass => Model.Size switch
+    private string SizeClass  => Model.Size switch
     {
         CardSize.Large  => "card-large",
         CardSize.Medium => "card-medium",
         _               => "card-small"
     };
-
-    private string PanicClass => Model.IsPanic ? "card-panic" : "";
-
+    private string PanicClass  => Model.IsPanic ? "card-panic" : "";
     private string ChangeClass => Model.PriceChangePercent >= 0 ? "change-up" : "change-down";
 
-    // Volatility glow — subtle radial box-shadow that intensifies with volatility
     private string GlowStyle
     {
         get
         {
-            if (Model.IsPanic) return "";  // panic has its own CSS animation
+            if (Model.IsPanic) return "";
             var v = (double)Model.Volatility;
             if (v < 0.5) return "";
-            var rgb     = Model.PriceChangePercent >= 0 ? "16,185,129" : "239,68,68";
-            var alpha   = Math.Min(0.08 + v / 40.0, 0.25);
-            var spread  = (int)Math.Min(8 + v * 3, 32);
+            var rgb   = Model.PriceChangePercent >= 0 ? "16,185,129" : "239,68,68";
+            var alpha = Math.Min(0.08 + v / 40.0, 0.25);
+            var spread = (int)Math.Min(8 + v * 3, 32);
             return $"box-shadow: 0 0 {spread}px rgba({rgb},{alpha:F2}), inset 0 0 {spread / 2}px rgba({rgb},{alpha / 2:F2});";
         }
     }
 
-    // Heatmap background — enabled via DashboardStateService toggle
     private string HeatmapStyle
     {
         get
@@ -162,39 +146,32 @@
             var p = (double)Model.PriceChangePercent;
             return p switch
             {
-                >  5  => "background: rgba(16,185,129,0.30);",
-                >  2  => "background: rgba(16,185,129,0.18);",
-                > 0.5 => "background: rgba(16,185,129,0.08);",
-                < -5  => "background: rgba(239,68,68,0.30);",
-                < -2  => "background: rgba(239,68,68,0.18);",
+                >  5   => "background: rgba(16,185,129,0.30);",
+                >  2   => "background: rgba(16,185,129,0.18);",
+                > 0.5  => "background: rgba(16,185,129,0.08);",
+                < -5   => "background: rgba(239,68,68,0.30);",
+                < -2   => "background: rgba(239,68,68,0.18);",
                 < -0.5 => "background: rgba(239,68,68,0.08);",
-                _     => ""
+                _      => ""
             };
         }
     }
 
-    // Volume bar height: relative volume capped at 4x → 100%
-    private int VolumeBarPct => (int)Math.Min(Model.RelativeVolume / 4.0m * 100m, 100m);
+    private int VolumeBarPct =>
+        (int)Math.Min(Model.RelativeVolume / 4.0m * 100m, 100m);
 
-    // ── Price formatting ──────────────────────────────────────────────────
-    // For micro-cap coins: "dim" the leading zeros so only moving digits pop
     private static MarkupString FormatPriceStyled(decimal price)
     {
         var s = FormatPrice(price);
         if (price >= 0.01m) return new MarkupString(s);
-
-        // e.g. 0.00004821 → dim "0.0000" highlight "4821"
         var dotIdx = s.IndexOf('.');
         if (dotIdx < 0) return new MarkupString(s);
-
-        var afterDot = s[(dotIdx + 1)..];
+        var afterDot  = s[(dotIdx + 1)..];
         var leadZeros = afterDot.TakeWhile(c => c == '0').Count();
         if (leadZeros == 0) return new MarkupString(s);
-
-        var dim  = s[..(dotIdx + 1 + leadZeros)];
-        var sig  = s[(dotIdx + 1 + leadZeros)..];
         return new MarkupString(
-            $"<span class='price-dim'>{dim}</span><span class='price-sig'>{sig}</span>");
+            $"<span class='price-dim'>{s[..(dotIdx + 1 + leadZeros)]}</span>" +
+            $"<span class='price-sig'>{s[(dotIdx + 1 + leadZeros)..]}</span>");
     }
 
     private static string FormatPrice(decimal price) => price switch
