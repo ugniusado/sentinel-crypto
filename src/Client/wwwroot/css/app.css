@@ -228,8 +228,9 @@ html, body {
   display:flex; align-items:center;
 }
 
-/* ── Digit-flip price animation ─────────────────────────────────────────── */
+/* ── Odometer / digital-clock price animation ───────────────────────────── */
 .anim-price {
+  display: inline-flex; align-items: center;
   font-family: var(--font-mono); font-variant-numeric: tabular-nums;
   font-weight: 600; letter-spacing: -.02em; color: var(--text-1);
   font-size: 1.35rem;
@@ -237,17 +238,30 @@ html, body {
 .card-large  .anim-price { font-size: 1.85rem; }
 .card-medium .anim-price { font-size: 1.5rem; }
 
-/* When @key changes, Blazor recreates the span → animation replays */
-.digit-val {
-  display: inline-block;
-  animation: digit-enter 220ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-@keyframes digit-enter {
-  from { transform: translateY(-35%); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
+/* Clip window — height/width come from the invisible spacer, never explicit px */
+.digit-slot { position: relative; display: inline-block; overflow: hidden; }
+
+/* Hidden "0" sets slot dimensions without appearing on screen */
+.digit-spc {
+  visibility: hidden; display: block;
+  line-height: 1.2; pointer-events: none; user-select: none;
 }
 
-.digit-sep { display: inline; }
+/* Visible digit layered on top of spacer — animates on @key change */
+.digit-ink {
+  position: absolute; inset: 0;
+  display: block; line-height: 1.2; text-align: center;
+}
+
+/* Rising price → new digit rolls in from bottom (like old digit rolls upward) */
+.digit-ink.digit-up { animation: roll-up 280ms cubic-bezier(0.16, 1, 0.3, 1); }
+/* Falling price → new digit rolls in from top */
+.digit-ink.digit-dn { animation: roll-dn 280ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+@keyframes roll-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes roll-dn { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+
+.digit-sep { display: inline-block; vertical-align: middle; line-height: 1.2; }
 .digit-dim { color: var(--text-3); }
 
 /* ── Change ──────────────────────────────────────────────────────────────── */

@@ -1,8 +1,10 @@
 @*
-  Digit-flip price animation.
-  Each digit is a plain inline-block span.
-  @key = "position:value" — when a digit changes, Blazor recreates that span,
-  which replays the CSS enter animation. No reel, no translateY, no alignment drift.
+  Odometer / digital-clock animation.
+  Each digit slot has an invisible "0" spacer that sets its width & height via
+  normal text flow (no explicit height units → no alignment drift).
+  The visible digit is position:absolute over the spacer.
+  When @key changes (digit value changed) Blazor recreates the span, replaying
+  the CSS roll animation.  Direction comes from overall price movement.
 *@
 
 <span class="anim-price">
@@ -10,11 +12,15 @@
     {
         var slot = _slots[i];
         var pos  = i;
+        var dir  = _isRising ? "up" : "dn";
 
         @if (slot.IsDigit)
         {
-            <span class="digit-val @(slot.IsDim ? "digit-dim" : "")"
-                  @key="@($"{pos}:{slot.DigitValue}")">@slot.DigitValue</span>
+            <span class="digit-slot @(slot.IsDim ? "digit-dim" : "")">
+                <span class="digit-spc" aria-hidden="true">0</span>
+                <span class="digit-ink digit-@dir"
+                      @key="@($"{pos}:{slot.DigitValue}")">@slot.DigitValue</span>
+            </span>
         }
         else
         {
@@ -26,6 +32,9 @@
 
 @code {
     [Parameter, EditorRequired] public decimal Value { get; set; }
+
+    private decimal _prevValue;
+    private bool    _isRising = true;
 
     private sealed record Slot
     {
@@ -39,7 +48,9 @@
 
     protected override void OnParametersSet()
     {
-        _slots = BuildSlots(Value);
+        _isRising  = Value >= _prevValue;
+        _prevValue = Value;
+        _slots     = BuildSlots(Value);
     }
 
     private static List<Slot> BuildSlots(decimal value)
