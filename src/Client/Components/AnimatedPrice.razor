@@ -1,13 +1,10 @@
 @*
   Odometer / digital-clock animation.
-  Each digit slot has an invisible "0" spacer that sets its width & height via
-  normal text flow (no explicit height units → no alignment drift).
-  The visible digit is position:absolute over the spacer.
-  When @key changes (digit value changed) Blazor recreates the span, replaying
-  the CSS roll animation.  Direction comes from overall price movement.
+  All layout-critical styles are inlined so browser CSS caching never breaks layout.
+  CSS classes only carry the roll animations (purely decorative — no layout impact).
 *@
 
-<span class="anim-price">
+<span class="anim-price" style="display:inline-flex;align-items:center;font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.02em;">
     @for (var i = 0; i < _slots.Count; i++)
     {
         var slot = _slots[i];
@@ -16,15 +13,20 @@
 
         @if (slot.IsDigit)
         {
-            <span class="digit-slot @(slot.IsDim ? "digit-dim" : "")">
-                <span class="digit-spc" aria-hidden="true">0</span>
+            <span style="position:relative;display:inline-block;overflow:hidden;" class="@(slot.IsDim ? "digit-dim" : "")">
+                @* Hidden spacer — sets slot width/height via normal text flow *@
+                <span aria-hidden="true"
+                      style="visibility:hidden;display:block;line-height:1.2;user-select:none;">0</span>
+                @* Visible digit — absolutely covers the spacer, animates on @key change *@
                 <span class="digit-ink digit-@dir"
+                      style="position:absolute;inset:0;display:block;line-height:1.2;text-align:center;"
                       @key="@($"{pos}:{slot.DigitValue}")">@slot.DigitValue</span>
             </span>
         }
         else
         {
-            <span class="digit-sep @(slot.IsDim ? "digit-dim" : "")"
+            <span style="display:inline-block;line-height:1.2;vertical-align:middle;"
+                  class="@(slot.IsDim ? "digit-dim" : "")"
                   @key="@($"s{pos}")">@slot.Char</span>
         }
     }
@@ -71,7 +73,6 @@
                 if (c == '0') dim = true;
                 else          pastSignificant = true;
             }
-
             slots.Add(char.IsDigit(c)
                 ? new Slot { IsDigit = true,  DigitValue = c - '0', IsDim = dim }
                 : new Slot { IsDigit = false, Char = c,              IsDim = dim });
