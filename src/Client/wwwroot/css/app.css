@@ -230,7 +230,7 @@ html, body {
 
 /* ── NumberFlow digit-reel animation ────────────────────────────────────── */
 .anim-price {
-  display: inline-flex; align-items: baseline;
+  display: inline-flex; align-items: flex-end;
   font-family: var(--font-mono); font-variant-numeric: tabular-nums;
   font-weight: 600; letter-spacing: -.02em; color: var(--text-1);
   font-size: 1.35rem;
@@ -250,7 +250,7 @@ html, body {
 .digit-cell { display: block; height: 1.2em; line-height: 1.2; }
 
 /* Separators (.  ,) and leading-zero dimming */
-.digit-sep  { display: inline-block; vertical-align: bottom; line-height: 1.2; }
+.digit-sep  { display: inline-block; height: 1.2em; line-height: 1.2; }
 .digit-dim  { color: var(--text-3); }
 
 /* ── Change ──────────────────────────────────────────────────────────────── */
