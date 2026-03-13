@@ -1,0 +1,93 @@
+@*
+  NumberFlow-style digit animation.
+  Each digit lives in an overflow:hidden slot containing a reel of 0–9.
+  When the digit changes, we update translateY and the CSS transition
+  smoothly scrolls the reel — no DOM recreation, no twitching.
+*@
+
+<span class="anim-price">
+    @for (var i = 0; i < _slots.Count; i++)
+    {
+        var slot = _slots[i];
+        var key  = i;
+
+        @if (slot.IsDigit)
+        {
+            <span class="digit-col @(slot.IsDim ? "digit-dim" : "")" @key="@($"d{key}")">
+                <span class="digit-reel" style="transform: translateY(@slot.ReelOffset)">
+                    @for (var d = 0; d <= 9; d++)
+                    {
+                        <span class="digit-cell">@d</span>
+                    }
+                </span>
+            </span>
+        }
+        else
+        {
+            <span class="digit-sep @(slot.IsDim ? "digit-dim" : "")" @key="@($"s{key}")">
+                @slot.Char
+            </span>
+        }
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired] public decimal Value { get; set; }
+
+    // ── Slot model ─────────────────────────────────────────────────────────
+    private sealed record Slot
+    {
+        public bool   IsDigit    { get; init; }
+        public int    DigitValue { get; init; }
+        public char   Char       { get; init; }
+        public bool   IsDim      { get; init; }
+
+        // translateY to scroll the reel to the correct digit.
+        // Each cell is 1.2em tall → digit d sits at -(d × 1.2)em.
+        public string ReelOffset =>
+            $"{(-DigitValue * 1.2).ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}em";
+    }
+
+    private List<Slot> _slots = [];
+
+    protected override void OnParametersSet()
+    {
+        _slots = BuildSlots(Value);
+    }
+
+    private static List<Slot> BuildSlots(decimal value)
+    {
+        var s      = FormatPrice(value);
+        var slots  = new List<Slot>(s.Length);
+        var dotIdx = s.IndexOf('.');
+
+        // Leading-zero dimming for sub-penny coins (e.g. 0.00004821)
+        bool dimMode       = value < 0.01m && dotIdx >= 0;
+        bool pastSignificant = false;
+
+        for (var i = 0; i < s.Length; i++)
+        {
+            var c = s[i];
+
+            bool dim = false;
+            if (dimMode && i > dotIdx && !pastSignificant)
+            {
+                if (c == '0') dim = true;
+                else          pastSignificant = true;
+            }
+
+            slots.Add(char.IsDigit(c)
+                ? new Slot { IsDigit = true, DigitValue = c - '0', IsDim = dim }
+                : new Slot { IsDigit = false, Char = c, IsDim = dim });
+        }
+
+        return slots;
+    }
+
+    private static string FormatPrice(decimal price) => price switch
+    {
+        >= 1000 => price.ToString("N2"),
+        >= 1    => price.ToString("N4"),
+        _       => price.ToString("N6")
+    };
+}

@@ -228,30 +228,30 @@ html, body {
   display:flex; align-items:center;
 }
 
-.price-value {
-  font-family:var(--font-mono); font-weight:600;
-  font-size:1.35rem; color:var(--text-1);
-  font-variant-numeric:tabular-nums; letter-spacing:-.02em;
+/* ── NumberFlow digit-reel animation ────────────────────────────────────── */
+.anim-price {
+  display: inline-flex; align-items: baseline;
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  font-weight: 600; letter-spacing: -.02em; color: var(--text-1);
+  font-size: 1.35rem;
 }
-.card-large  .price-value { font-size:1.85rem; }
-.card-medium .price-value { font-size:1.5rem; }
+.card-large  .anim-price { font-size: 1.85rem; }
+.card-medium .anim-price { font-size: 1.5rem; }
 
-/* Leading-zero dimming for sub-penny coins */
-.price-dim { color:var(--text-3); }
-.price-sig { color:var(--text-1); font-weight:700; }
+/* Each digit lives in a clipping window exactly 1.2em tall */
+.digit-col  { display: inline-block; height: 1.2em; overflow: hidden; vertical-align: bottom; }
 
-/* Colour flash — number stays in place, only hue changes. No layout shift. */
-.price-up   { animation: flash-colour-up   500ms ease-out; }
-.price-down { animation: flash-colour-down 500ms ease-out; }
-
-@keyframes flash-colour-up {
-  0%   { color: var(--green); }
-  100% { color: var(--text-1); }
+/* The reel slides up/down; transition fires whenever Blazor updates translateY in-place */
+.digit-reel {
+  display: flex; flex-direction: column;
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
 }
-@keyframes flash-colour-down {
-  0%   { color: var(--red); }
-  100% { color: var(--text-1); }
-}
+.digit-cell { display: block; height: 1.2em; line-height: 1.2; }
+
+/* Separators (.  ,) and leading-zero dimming */
+.digit-sep  { display: inline-block; vertical-align: bottom; line-height: 1.2; }
+.digit-dim  { color: var(--text-3); }
 
 /* ── Change ──────────────────────────────────────────────────────────────── */
 .card-change {
