@@ -5,7 +5,7 @@
   smoothly scrolls the reel — no DOM recreation, no twitching.
 *@
 
-<span class="anim-price" style="display:inline-flex;align-items:flex-end;">
+<span class="anim-price" style="display:inline-grid;grid-auto-flow:column;grid-template-rows:1.2em;">
     @for (var i = 0; i < _slots.Count; i++)
     {
         var slot = _slots[i];
@@ -14,7 +14,7 @@
         @if (slot.IsDigit)
         {
             <span class="digit-col @(slot.IsDim ? "digit-dim" : "")" @key="@($"d{key}")"
-                  style="display:inline-block;height:1.2em;overflow:hidden;">
+                  style="overflow:hidden;">
                 <span class="digit-reel"
                       style="display:flex;flex-direction:column;transition:transform 260ms cubic-bezier(0.16,1,0.3,1);transform:translateY(@slot.ReelOffset)">
                     @for (var d = 0; d <= 9; d++)
@@ -27,7 +27,7 @@
         else
         {
             <span class="digit-sep @(slot.IsDim ? "digit-dim" : "")" @key="@($"s{key}")"
-                  style="display:inline-block;height:1.2em;line-height:1.2;">
+                  style="display:flex;align-items:flex-end;line-height:1;">
                 @slot.Char
             </span>
         }
