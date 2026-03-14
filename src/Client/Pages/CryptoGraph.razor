@@ -225,9 +225,13 @@
         ["BTCUSDT","ETHUSDT","BNBUSDT","SOLUSDT","XRPUSDT","ADAUSDT","AVAXUSDT","DOGEUSDT","LINKUSDT"];
 
     private static readonly (string iv, string label)[] _intervals =
-        [("15m","15M"),("1h","1H"),("4h","4H"),("1d","1D"),("1w","1W")];
+        [("15m","15M"),("1h","1H"),("4h","4H"),("1d","1D"),("1w","1W"),("1M","1Y")];
 
-    protected override async Task OnInitializedAsync() => await LoadData();
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Symbol)) Symbol = "BTCUSDT";
+        await LoadData();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -310,6 +314,7 @@
                 "4h"  => TimeSpan.FromHours(4),
                 "1d"  => TimeSpan.FromDays(1),
                 "1w"  => TimeSpan.FromDays(7),
+                "1M"  => TimeSpan.FromDays(30),
                 _     => TimeSpan.FromHours(1)
             };
             _mlLabels    = Enumerable.Range(1, result.Predicted.Length)
@@ -346,7 +351,9 @@
     private static string SymLabel(string sym) => sym.Replace("USDT", "");
 
     private string FormatLabel(DateTime dt) =>
-        _interval is "1d" or "1w" ? dt.ToString("MMM dd") : dt.ToString("MM/dd HH:mm");
+        _interval is "1M" ? dt.ToString("MMM yyyy") :
+        _interval is "1d" or "1w" ? dt.ToString("MMM dd") :
+        dt.ToString("MM/dd HH:mm");
 
     // Pre-computed display values (avoids ToString("F0") inside HTML attributes)
     private string RsiDisplay   => _prediction is null ? "" : _prediction.Rsi.ToString("F1");

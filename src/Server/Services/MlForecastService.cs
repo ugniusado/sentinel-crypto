@@ -15,6 +15,7 @@ public class MlForecastService
             "4h"  => 42,
             "1d"  => 7,
             "1w"  => 4,
+            "1M"  => 12,  // yearly seasonality
             _     => 24   // 1h default
         };
         // SSA constraint: windowSize <= seriesLength / 2
