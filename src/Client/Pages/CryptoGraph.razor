@@ -135,6 +135,41 @@
                 Always do your own research before making investment decisions.
             </div>
         </div>
+
+        <div class="ls-panel ls-@(_prediction.LsDirection.ToLower())">
+            <div class="ls-left">
+                <span class="ls-tag">POSITION BIAS</span>
+                <span class="ls-dir">@(_prediction.LsDirection.ToUpper())</span>
+            </div>
+            <div class="ls-right">
+                <span class="ls-conf-label">@(_prediction.LsConfidence.ToUpper()) CONFIDENCE</span>
+                <span class="ls-sub">Based on signal score @(_prediction.Score > 0 ? "+" : "")@_prediction.Score / 100</span>
+            </div>
+        </div>
+
+        <div class="fc-panel">
+            <div class="fc-header">
+                <span class="fc-icon">◈</span>
+                <span class="fc-title">PRICE FORECAST</span>
+                <span class="beta-pill">ALGO</span>
+            </div>
+            <div class="fc-grid">
+                <div class="fc-row fc-head">
+                    <span>TIMEFRAME</span><span>TARGET PRICE</span><span>CHANGE</span>
+                </div>
+                @foreach (var row in ForecastRows())
+                {
+                    <div class="fc-row">
+                        <span class="fc-tf">@row.Label</span>
+                        <span class="fc-price">@row.Price</span>
+                        <span class="fc-pct @row.Cls">@row.Pct</span>
+                    </div>
+                }
+            </div>
+            <div class="fc-disclaimer">
+                Momentum + signal extrapolation with mean-reversion decay. Highly speculative — not financial advice.
+            </div>
+        </div>
     }
 
 </div>
@@ -190,7 +225,7 @@
             var (macd, sig, _)   = IndicatorService.Macd(closes);
             var (bbU, bbM, bbL)  = IndicatorService.BollingerBands(closes, 20);
 
-            _prediction = IndicatorService.Predict(closes, rsi, macd, sig, bbU, bbL, bbM, sma20, sma50);
+            _prediction = IndicatorService.Predict(closes, rsi, macd, sig, bbU, bbL, bbM, sma20, sma50, _interval);
 
             var take = Math.Min(closes.Length, 100);
             var skip = closes.Length - take;
@@ -275,5 +310,33 @@
         "Strong Buy" or "Buy"   => "▲",
         "Sell" or "Strong Sell" => "▼",
         _                       => "—"
+    };
+
+    private record FcRow(string Label, string Price, string Pct, string Cls);
+
+    private IEnumerable<FcRow> ForecastRows()
+    {
+        if (_prediction is null) yield break;
+        var cur = _prediction.CurrentPrice;
+        yield return MakeRow("1 Day",   cur, _prediction.Forecast1d);
+        yield return MakeRow("3 Days",  cur, _prediction.Forecast3d);
+        yield return MakeRow("1 Week",  cur, _prediction.Forecast1w);
+        yield return MakeRow("1 Month", cur, _prediction.Forecast1m);
+        yield return MakeRow("1 Year",  cur, _prediction.Forecast1y);
+    }
+
+    private static FcRow MakeRow(string label, decimal cur, decimal forecast)
+    {
+        var pct = cur > 0 ? (forecast - cur) / cur * 100m : 0m;
+        var pctStr = (pct >= 0 ? "+" : "") + pct.ToString("F2") + "%";
+        var cls    = pct >= 0 ? "pct-up" : "pct-dn";
+        return new FcRow(label, FormatPrice(forecast), pctStr, cls);
+    }
+
+    private static string FormatPrice(decimal price) => price switch
+    {
+        >= 1000m => price.ToString("N2"),
+        >= 1m    => price.ToString("N4"),
+        _        => price.ToString("N6")
     };
 }

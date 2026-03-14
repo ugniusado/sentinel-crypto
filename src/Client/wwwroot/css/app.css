@@ -520,6 +520,54 @@ html, body {
   border-top:1px solid var(--border); line-height:1.6;
 }
 
+/* ── Long / Short panel ──────────────────────────────────────────────────── */
+.ls-panel {
+  display:flex; align-items:center; justify-content:space-between;
+  margin:.75rem 0; padding:.9rem 1.2rem;
+  border:1px solid var(--border); border-radius:6px;
+  background:rgba(255,255,255,.02);
+}
+.ls-panel.ls-long   { border-color:rgba(16,185,129,.35); background:rgba(16,185,129,.05); }
+.ls-panel.ls-short  { border-color:rgba(239,68,68,.35);  background:rgba(239,68,68,.05); }
+.ls-panel.ls-neutral{ border-color:var(--border); }
+.ls-left  { display:flex; flex-direction:column; gap:.2rem; }
+.ls-right { display:flex; flex-direction:column; align-items:flex-end; gap:.2rem; }
+.ls-tag   { font-family:var(--font-mono); font-size:.6rem; color:var(--text-3); letter-spacing:.1em; }
+.ls-dir   { font-family:var(--font-mono); font-size:1.3rem; font-weight:700; letter-spacing:.08em; }
+.ls-panel.ls-long  .ls-dir  { color:var(--green); }
+.ls-panel.ls-short .ls-dir  { color:var(--red); }
+.ls-panel.ls-neutral .ls-dir{ color:var(--text-2); }
+.ls-conf-label { font-family:var(--font-mono); font-size:.65rem; letter-spacing:.1em; color:var(--text-2); }
+.ls-sub        { font-family:var(--font-mono); font-size:.6rem; color:var(--text-3); }
+
+/* ── Price forecast panel ────────────────────────────────────────────────── */
+.fc-panel {
+  margin:.75rem 0; border:1px solid var(--border); border-radius:6px;
+  background:rgba(255,255,255,.02); overflow:hidden;
+}
+.fc-header {
+  display:flex; align-items:center; gap:.5rem;
+  padding:.75rem 1.2rem; border-bottom:1px solid var(--border);
+}
+.fc-icon  { color:var(--accent); font-size:.85rem; }
+.fc-title { font-family:var(--font-mono); font-size:.75rem; font-weight:700;
+            letter-spacing:.12em; color:var(--text-1); }
+.fc-grid  { display:flex; flex-direction:column; }
+.fc-row   { display:grid; grid-template-columns:1fr 1fr 1fr;
+            padding:.55rem 1.2rem; border-bottom:1px solid rgba(255,255,255,.03); }
+.fc-row:last-child { border-bottom:none; }
+.fc-head  { font-family:var(--font-mono); font-size:.6rem; letter-spacing:.1em;
+            color:var(--text-3); padding:.5rem 1.2rem; }
+.fc-tf    { font-family:var(--font-mono); font-size:.72rem; color:var(--text-2); }
+.fc-price { font-family:var(--font-mono); font-size:.72rem; color:var(--text-1); }
+.fc-pct   { font-family:var(--font-mono); font-size:.72rem; font-weight:600; text-align:right; }
+.pct-up   { color:var(--green); }
+.pct-dn   { color:var(--red); }
+.fc-disclaimer {
+  padding:.6rem 1.2rem; font-family:var(--font-mono); font-size:.6rem;
+  color:var(--text-3); border-top:1px solid var(--border); line-height:1.5;
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .heatmap-grid       { grid-template-columns:repeat(2, 1fr); }

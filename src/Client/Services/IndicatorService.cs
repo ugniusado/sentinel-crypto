@@ -2,13 +2,23 @@ namespace SentinelCrypto.Client.Services;
 
 public record TrendPrediction
 {
-    public string       Signal     { get; init; } = "Hold";
-    public string       Risk       { get; init; } = "Medium";
-    public int          Score      { get; init; }
-    public List<string> Reasons    { get; init; } = [];
-    public double       Rsi        { get; init; }
-    public double       MacdDiff   { get; init; }
-    public double       BbPosition { get; init; }
+    public string       Signal      { get; init; } = "Hold";
+    public string       Risk        { get; init; } = "Medium";
+    public int          Score       { get; init; }
+    public List<string> Reasons     { get; init; } = [];
+    public double       Rsi         { get; init; }
+    public double       MacdDiff    { get; init; }
+    public double       BbPosition  { get; init; }
+    // Long / Short recommendation
+    public string       LsDirection  { get; init; } = "Neutral";
+    public string       LsConfidence { get; init; } = "Low";
+    // Price forecasts
+    public decimal      CurrentPrice { get; init; }
+    public decimal      Forecast1d   { get; init; }
+    public decimal      Forecast3d   { get; init; }
+    public decimal      Forecast1w   { get; init; }
+    public decimal      Forecast1m   { get; init; }
+    public decimal      Forecast1y   { get; init; }
 }
 
 public static class IndicatorService
@@ -109,7 +119,8 @@ public static class IndicatorService
         double[] closes,
         double[] rsi, double[] macdLine, double[] signalLine,
         double[] bbUpper, double[] bbLower, double[] bbMiddle,
-        double[] sma20, double[] sma50)
+        double[] sma20, double[] sma50,
+        string interval = "1h")
     {
         var n       = closes.Length - 1;
         var score   = 0;
@@ -164,15 +175,58 @@ public static class IndicatorService
                  : (volatility > 3 || Math.Abs(score) < 45) ? "Medium"
                  : "Low";
 
+        // ── Long / Short recommendation ───────────────────────────────────
+        var absScore     = Math.Abs(score);
+        var lsDirection  = score >= 30 ? "Long" : score <= -30 ? "Short" : "Neutral";
+        var lsConfidence = absScore >= 65 ? "High" : absScore >= 40 ? "Medium" : "Low";
+
+        // ── Price forecast ────────────────────────────────────────────────
+        // Candles per day for the chosen interval
+        double cpd = interval switch
+        {
+            "15m" => 96.0,
+            "4h"  => 6.0,
+            "1d"  => 1.0,
+            "1w"  => 1.0 / 7.0,
+            _     => 24.0  // 1h default
+        };
+
+        // Per-candle momentum: average of last 20 candles % change
+        var window = Math.Min(20, n);
+        double sumPct = 0;
+        for (var i = n - window + 1; i <= n; i++)
+            sumPct += (closes[i] - closes[i - 1]) / closes[i - 1];
+        var perCandleMom = sumPct / window;
+
+        // Convert to per-day and add score-derived directional bias (max ±0.3%/day)
+        var perDayMom      = perCandleMom * cpd;
+        var scoreBiasDay   = (score / 100.0) * 0.003;
+        var dailyRate      = perDayMom + scoreBiasDay;
+
+        // Project forward with mean-reversion decay: shorter = more momentum-driven,
+        // longer = heavily dampened toward the signal bias alone
+        static decimal Project(double cur, double rate, double decay, double days) =>
+            (decimal)(cur * Math.Pow(1.0 + rate * decay, days));
+
+        var cur = closes[n];
+
         return new TrendPrediction
         {
-            Signal     = signal,
-            Risk       = risk,
-            Score      = Math.Clamp(score, -100, 100),
-            Reasons    = reasons,
-            Rsi        = curRsi,
-            MacdDiff   = macdDiff,
-            BbPosition = bbPos,
+            Signal       = signal,
+            Risk         = risk,
+            Score        = Math.Clamp(score, -100, 100),
+            Reasons      = reasons,
+            Rsi          = curRsi,
+            MacdDiff     = macdDiff,
+            BbPosition   = bbPos,
+            LsDirection  = lsDirection,
+            LsConfidence = lsConfidence,
+            CurrentPrice = (decimal)cur,
+            Forecast1d   = Project(cur, dailyRate, 1.00, 1),
+            Forecast3d   = Project(cur, dailyRate, 0.85, 3),
+            Forecast1w   = Project(cur, dailyRate, 0.65, 7),
+            Forecast1m   = Project(cur, dailyRate, 0.25, 30),
+            Forecast1y   = Project(cur, dailyRate, 0.05, 365),
         };
     }
 }
