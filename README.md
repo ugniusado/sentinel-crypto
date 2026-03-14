@@ -13,9 +13,9 @@ Real-time cryptocurrency market dashboard built to handle **1,000+ price updates
 
 A dedicated `/graph` page with algorithmic technical analysis and three independent price forecast models.
 
-![Trend Analyzer — Charts](docs/trend-analyzer-charts.png)
-
 ![Trend Analyzer — Forecast Models](docs/trend-analyzer-forecast.png)
+
+![Trend Analyzer — Charts](docs/trend-analyzer-charts.png)
 
 ### Indicators
 | Indicator | Details |
