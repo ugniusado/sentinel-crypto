@@ -3,6 +3,7 @@
 @inject BinanceHistoricalService HistoricalService
 @inject IJSRuntime JS
 @inject NavigationManager Nav
+@inject MlPredictionService MlService
 
 <PageTitle>Sentinel — Trend Analyzer</PageTitle>
 
@@ -64,6 +65,21 @@
                 <canvas id="rsi-chart"></canvas>
             </div>
         </div>
+
+        @if (_mlLoading)
+        {
+            <div class="ml-status">
+                <div class="ml-spinner"></div>
+                <span>Training SSA model on @Symbol data…</span>
+            </div>
+        }
+        else if (_mlReady)
+        {
+            <div class="ml-status ml-ready">
+                <span class="ml-dot"></span>
+                <span>ML PREDICTION ACTIVE — SSA model · 90% confidence band</span>
+            </div>
+        }
 
         <div class="ind-strip">
 
@@ -194,6 +210,13 @@
     private TrendPrediction? _prediction;
     private bool             _chartsReady;
 
+    private double?[] _mlPredicted = [];
+    private double?[] _mlUpper    = [];
+    private double?[] _mlLower    = [];
+    private string[]  _mlLabels   = [];
+    private bool      _mlLoading;
+    private bool      _mlReady;
+
     private string[]  _labels   = [];
     private double?[] _prices   = [], _sma20 = [], _sma50 = [],
                       _bbUpper  = [], _bbLower = [], _rsiVals = [];
@@ -215,6 +238,9 @@
                 _labels, _prices, _sma20, _sma50, _bbUpper, _bbLower);
             await JS.InvokeVoidAsync("SentinelCrypto.renderRsiChart",
                 _labels, _rsiVals);
+            if (_mlReady)
+                await JS.InvokeVoidAsync("SentinelCrypto.updateMlPrediction",
+                    _mlLabels, _mlPredicted, _mlUpper, _mlLower);
         }
     }
 
@@ -223,6 +249,8 @@
         _loading     = true;
         _error       = null;
         _chartsReady = false;
+        _mlReady     = false;
+        _mlLoading   = false;
         StateHasChanged();
 
         try
@@ -251,6 +279,9 @@
             _bbUpper = Trim(bbU,   skip, take);
             _bbLower = Trim(bbL,   skip, take);
             _rsiVals = Trim(rsi,   skip, take);
+
+            // Kick off ML prediction async (don't block chart rendering)
+            _ = LoadMlPredictionAsync(closes);
         }
         catch (Exception ex)
         {
@@ -260,6 +291,41 @@
         {
             _loading = false;
         }
+    }
+
+    private async Task LoadMlPredictionAsync(double[] closes)
+    {
+        _mlLoading = true;
+        _mlReady   = false;
+        StateHasChanged();
+
+        var result = await MlService.ForecastAsync(closes, _interval, 20);
+        if (result is not null && result.Predicted.Length > 0)
+        {
+            // Generate future labels by extrapolating from the last kline
+            var lastTime     = DateTime.UtcNow; // approximate
+            var intervalMs   = _interval switch
+            {
+                "15m" => TimeSpan.FromMinutes(15),
+                "4h"  => TimeSpan.FromHours(4),
+                "1d"  => TimeSpan.FromDays(1),
+                "1w"  => TimeSpan.FromDays(7),
+                _     => TimeSpan.FromHours(1)
+            };
+            _mlLabels    = Enumerable.Range(1, result.Predicted.Length)
+                .Select(i => FormatLabel(lastTime + intervalMs * i))
+                .ToArray();
+            _mlPredicted = result.Predicted.Select(v => (double?)v).ToArray();
+            _mlUpper     = result.UpperBound.Select(v => (double?)v).ToArray();
+            _mlLower     = result.LowerBound.Select(v => (double?)v).ToArray();
+            _mlReady     = true;
+        }
+        _mlLoading = false;
+        StateHasChanged();
+
+        if (_mlReady && _chartsReady)
+            await JS.InvokeVoidAsync("SentinelCrypto.updateMlPrediction",
+                _mlLabels, _mlPredicted, _mlUpper, _mlLower);
     }
 
     private async Task SelectSymbol(string sym)

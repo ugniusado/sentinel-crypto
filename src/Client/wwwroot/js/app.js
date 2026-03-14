@@ -82,6 +82,92 @@ window.SentinelCrypto = {
         });
     },
 
+    updateMlPrediction(futureLabels, predicted, upper, lower) {
+        const chart = window._sc_priceChart;
+        if (!chart) return;
+        const mono = "'JetBrains Mono', monospace";
+
+        // Extend labels
+        const allLabels = [...chart.data.labels, ...futureLabels];
+
+        // Pad historical datasets with nulls for the future slots
+        const histLen = chart.data.labels.length;
+        const futLen  = futureLabels.length;
+
+        // Connecting point: repeat last historical price so the prediction line starts from there
+        const lastPrice = chart.data.datasets.find(d => d.label === 'Price')
+            ?.data.filter(v => v != null).at(-1) ?? null;
+        const connector = [lastPrice, ...predicted.slice(1)];
+
+        // Pad existing datasets
+        chart.data.datasets.forEach(ds => {
+            const pad = new Array(futLen).fill(null);
+            ds.data = [...ds.data, ...pad];
+        });
+
+        // ML confidence band (lower fill)
+        chart.data.datasets.push({
+            label: 'ML Lower',
+            data: [...new Array(histLen - 1).fill(null), lastPrice, ...lower.slice(1)],
+            borderColor: 'transparent',
+            borderWidth: 0,
+            pointRadius: 0,
+            fill: false,
+            order: 10
+        });
+        // ML confidence band (upper fill to lower)
+        chart.data.datasets.push({
+            label: 'ML Upper',
+            data: [...new Array(histLen - 1).fill(null), lastPrice, ...upper.slice(1)],
+            borderColor: 'rgba(99,102,241,0.15)',
+            borderWidth: 1,
+            borderDash: [2, 4],
+            pointRadius: 0,
+            fill: '-1',
+            backgroundColor: 'rgba(99,102,241,0.08)',
+            order: 9
+        });
+        // ML predicted line
+        chart.data.datasets.push({
+            label: 'ML Forecast',
+            data: [...new Array(histLen - 1).fill(null), lastPrice, ...connector],
+            borderColor: '#818cf8',
+            borderWidth: 2,
+            borderDash: [6, 3],
+            pointRadius: 0,
+            tension: 0.3,
+            fill: false,
+            order: 0
+        });
+
+        chart.data.labels = allLabels;
+
+        // Add NOW annotation
+        chart.options.plugins.annotation = {
+            annotations: {
+                nowLine: {
+                    type: 'line',
+                    xMin: chart.data.labels[histLen - 1],
+                    xMax: chart.data.labels[histLen - 1],
+                    borderColor: 'rgba(255,255,255,0.15)',
+                    borderWidth: 1,
+                    borderDash: [4, 4],
+                    label: {
+                        content: 'NOW',
+                        display: true,
+                        position: 'start',
+                        yAdjust: 8,
+                        backgroundColor: 'rgba(0,0,0,0)',
+                        color: 'rgba(255,255,255,0.25)',
+                        font: { family: mono, size: 9 }
+                    }
+                }
+            }
+        };
+
+        chart.update('none');
+    },
+
     renderRsiChart(labels, rsi) {
         if (window._sc_rsiChart) { window._sc_rsiChart.destroy(); window._sc_rsiChart = null; }
         const ctx = document.getElementById('rsi-chart');

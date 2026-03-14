@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace SentinelCrypto.Client.Services;
@@ -16,6 +17,7 @@ public sealed class CryptoSignalRService : IAsyncDisposable
     private HubConnection? _hub;
     private readonly PriceStateService _priceState;
     private readonly IConfiguration _config;
+    private readonly NavigationManager _nav;
     private readonly ILogger<CryptoSignalRService> _logger;
 
     public HubStatus Status { get; private set; } = HubStatus.Disconnected;
@@ -24,16 +26,23 @@ public sealed class CryptoSignalRService : IAsyncDisposable
     public CryptoSignalRService(
         PriceStateService priceState,
         IConfiguration config,
+        NavigationManager nav,
         ILogger<CryptoSignalRService> logger)
     {
         _priceState = priceState;
         _config = config;
+        _nav = nav;
         _logger = logger;
     }
 
     public async Task StartAsync()
     {
-        var hubUrl = _config["SignalR:HubUrl"] ?? "http://localhost:5000/hubs/crypto";
+        // Resolve relative URLs (e.g. "/hubs/crypto") against the app's base URI
+        // so SignalR always gets an absolute URL regardless of which port is used.
+        var configured = _config["SignalR:HubUrl"] ?? "/hubs/crypto";
+        var hubUrl = configured.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+            ? configured
+            : new Uri(new Uri(_nav.BaseUri), configured).ToString();
 
         _hub = new HubConnectionBuilder()
             .WithUrl(hubUrl)

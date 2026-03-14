@@ -24,6 +24,9 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.10.1" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.10.0" />
 
+    <!-- ML.NET time series forecasting -->
+    <PackageReference Include="Microsoft.ML.TimeSeries" Version="3.0.1" />
+
     <!-- Health Checks -->
     <PackageReference Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
     <PackageReference Include="AspNetCore.HealthChecks.Uris" Version="9.0.0" />

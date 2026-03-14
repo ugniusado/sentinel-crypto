@@ -4,6 +4,10 @@ using SentinelCrypto.Client.Services;
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<SentinelCrypto.Client.App>("#app");
 
+builder.Services.AddScoped(sp => new HttpClient
+    { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+builder.Services.AddScoped<MlPredictionService>();
+
 builder.Services.AddSingleton<PriceStateService>();
 builder.Services.AddSingleton<CryptoSignalRService>();
 builder.Services.AddSingleton<DashboardStateService>();

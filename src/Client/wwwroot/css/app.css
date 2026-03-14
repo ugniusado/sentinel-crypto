@@ -588,6 +588,26 @@ html, body {
   font-family:var(--font-mono); font-size:.6rem; color:var(--text-3); line-height:1.5;
 }
 
+/* ── ML prediction status bar ───────────────────────────────────────────── */
+.ml-status {
+  display:flex; align-items:center; gap:.6rem;
+  padding:.5rem .9rem; border-radius:4px;
+  background:rgba(99,102,241,.06); border:1px solid rgba(99,102,241,.2);
+  font-family:var(--font-mono); font-size:.65rem; color:var(--text-3);
+}
+.ml-ready { color:rgba(129,140,248,.85); border-color:rgba(99,102,241,.35); }
+.ml-spinner {
+  width:10px; height:10px; border-radius:50%;
+  border:1px solid rgba(99,102,241,.3); border-top-color:#818cf8;
+  animation:spin .8s linear infinite; flex-shrink:0;
+}
+.ml-dot {
+  width:6px; height:6px; border-radius:50%;
+  background:#818cf8; flex-shrink:0;
+  box-shadow:0 0 6px rgba(129,140,248,.6);
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 800px) {
   .fc-models-grid { grid-template-columns:1fr; }

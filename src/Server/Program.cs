@@ -61,6 +61,10 @@ if (!string.IsNullOrWhiteSpace(redisConn))
         .AddRedis(redisConn, name: "redis");
 }
 
+// Controllers (REST API)
+builder.Services.AddControllers();
+builder.Services.AddSingleton<MlForecastService>();
+
 // OpenTelemetry tracing (exports via OTLP — Jaeger 1.35+ accepts OTLP on port 4317)
 var otlpEndpoint = builder.Configuration["Otlp:Endpoint"];
 builder.Services.AddOpenTelemetry()
@@ -103,6 +107,7 @@ app.UseHealthChecks("/health", new HealthCheckOptions
 });
 
 app.MapHub<CryptoHub>("/hubs/crypto");
+app.MapControllers();
 
 // Serve the Blazor WASM client (dev hot-reload + production static files)
 app.UseBlazorFrameworkFiles();
