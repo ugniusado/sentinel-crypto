@@ -1,24 +1,32 @@
 namespace SentinelCrypto.Client.Services;
 
+public record ForecastModel
+{
+    public string  Name { get; init; } = "";
+    public string  Tag  { get; init; } = "";   // CSS modifier: momentum | reversion | signal
+    public string  Desc { get; init; } = "";
+    public decimal F1d  { get; init; }
+    public decimal F3d  { get; init; }
+    public decimal F1w  { get; init; }
+    public decimal F1m  { get; init; }
+    public decimal F1y  { get; init; }
+}
+
 public record TrendPrediction
 {
-    public string       Signal      { get; init; } = "Hold";
-    public string       Risk        { get; init; } = "Medium";
-    public int          Score       { get; init; }
-    public List<string> Reasons     { get; init; } = [];
-    public double       Rsi         { get; init; }
-    public double       MacdDiff    { get; init; }
-    public double       BbPosition  { get; init; }
+    public string         Signal       { get; init; } = "Hold";
+    public string         Risk         { get; init; } = "Medium";
+    public int            Score        { get; init; }
+    public List<string>   Reasons      { get; init; } = [];
+    public double         Rsi          { get; init; }
+    public double         MacdDiff     { get; init; }
+    public double         BbPosition   { get; init; }
     // Long / Short recommendation
-    public string       LsDirection  { get; init; } = "Neutral";
-    public string       LsConfidence { get; init; } = "Low";
-    // Price forecasts
-    public decimal      CurrentPrice { get; init; }
-    public decimal      Forecast1d   { get; init; }
-    public decimal      Forecast3d   { get; init; }
-    public decimal      Forecast1w   { get; init; }
-    public decimal      Forecast1m   { get; init; }
-    public decimal      Forecast1y   { get; init; }
+    public string         LsDirection  { get; init; } = "Neutral";
+    public string         LsConfidence { get; init; } = "Low";
+    // Price forecasts — three independent models
+    public decimal        CurrentPrice { get; init; }
+    public ForecastModel[] Forecasts   { get; init; } = [];
 }
 
 public static class IndicatorService
@@ -180,37 +188,72 @@ public static class IndicatorService
         var lsDirection  = score >= 30 ? "Long" : score <= -30 ? "Short" : "Neutral";
         var lsConfidence = absScore >= 65 ? "High" : absScore >= 40 ? "Medium" : "Low";
 
-        // ── Price forecast ────────────────────────────────────────────────
-        // Candles per day for the chosen interval
+        // ── Price forecast — three independent models ─────────────────────
         double cpd = interval switch
         {
             "15m" => 96.0,
             "4h"  => 6.0,
             "1d"  => 1.0,
             "1w"  => 1.0 / 7.0,
-            _     => 24.0  // 1h default
+            _     => 24.0
         };
 
-        // Realized daily volatility from last 20 candles (σ of returns → daily)
+        var cur = closes[n];
+
+        // ── Realized daily volatility (σ of returns → daily) ──────────────
         var volWindow = Math.Min(20, n);
-        double sumSq = 0;
+        double sumSq  = 0;
         for (var i = n - volWindow + 1; i <= n; i++)
         {
             var r = (closes[i] - closes[i - 1]) / closes[i - 1];
             sumSq += r * r;
         }
-        var perCandleVol = Math.Sqrt(sumSq / volWindow);
-        // Convert per-candle σ to daily σ, cap at 7% to prevent absurd alt-coin projections
-        var dailyVol = Math.Min(perCandleVol * Math.Sqrt(cpd), 0.07);
+        var dailyVol = Math.Min(Math.Sqrt(sumSq / volWindow) * Math.Sqrt(cpd), 0.07);
 
-        // Direction is driven entirely by signal score (-1 … +1)
-        // This ensures Buy → upward, Sell → downward, Hold → flat
+        // ── Model A: Trend Momentum ────────────────────────────────────────
+        // Blends SMA20 slope + price rate-of-change, extrapolated with a
+        // 15-day half-life so the trend fades rather than running forever.
+        var slopeLookback = Math.Clamp((int)(3 * cpd), 5, Math.Min(60, n - 1));
+        var smaSlope = !double.IsNaN(sma20[n]) && !double.IsNaN(sma20[n - slopeLookback])
+                       && sma20[n - slopeLookback] > 0
+            ? (sma20[n] - sma20[n - slopeLookback]) / sma20[n - slopeLookback]
+              / (slopeLookback / cpd)
+            : 0.0;
+
+        var rocLookback = Math.Clamp((int)(2 * cpd), 3, Math.Min(40, n - 1));
+        var priceRoc    = closes[n - rocLookback] > 0
+            ? (closes[n] - closes[n - rocLookback]) / closes[n - rocLookback]
+              / (rocLookback / cpd)
+            : 0.0;
+
+        var trendRate = Math.Clamp(smaSlope * 0.6 + priceRoc * 0.4, -0.02, 0.02);
+        const double trendHL = 15.0; // half-life in days
+
+        // totalMove(d) = rate × HL/ln2 × (1 − e^(−d·ln2/HL))
+        static decimal ProjectTrend(double c, double rate, double days)
+        {
+            var move = rate * trendHL / Math.Log(2) * (1 - Math.Exp(-days * Math.Log(2) / trendHL));
+            return (decimal)(c * (1 + Math.Clamp(move, -0.90, 5.0)));
+        }
+
+        // ── Model B: Mean Reversion ────────────────────────────────────────
+        // Assumes price gravitates back toward SMA50 (or SMA20 if SMA50
+        // unavailable). 20-day half-life: half the gap closes in ~20 days.
+        var meanTarget = !double.IsNaN(sma50[n]) ? sma50[n] : bbMiddle[n];
+        const double revHL = 20.0;
+
+        static decimal ProjectReversion(double c, double target, double days)
+        {
+            var fraction = 1 - Math.Exp(-days * Math.Log(2) / revHL);
+            return (decimal)(c + (target - c) * fraction);
+        }
+
+        // ── Model C: Indicator Signal ──────────────────────────────────────
+        // Direction driven purely by composite signal score; magnitude scaled
+        // by realized volatility × √days (random-walk uncertainty scaling).
         var direction = score / 100.0;
 
-        // Project using: cur × (1 + direction × dailyVol × √days)
-        // √t scaling reflects uncertainty growing sub-linearly with time
-        var cur = closes[n];
-        static decimal Project(double c, double dir, double vol, double days) =>
+        static decimal ProjectSignal(double c, double dir, double vol, double days) =>
             (decimal)(c * (1.0 + Math.Clamp(dir * vol * Math.Sqrt(days), -0.90, 5.0)));
 
         return new TrendPrediction
@@ -225,11 +268,42 @@ public static class IndicatorService
             LsDirection  = lsDirection,
             LsConfidence = lsConfidence,
             CurrentPrice = (decimal)cur,
-            Forecast1d   = Project(cur, direction, dailyVol, 1),
-            Forecast3d   = Project(cur, direction, dailyVol, 3),
-            Forecast1w   = Project(cur, direction, dailyVol, 7),
-            Forecast1m   = Project(cur, direction, dailyVol, 30),
-            Forecast1y   = Project(cur, direction, dailyVol, 365),
+            Forecasts    =
+            [
+                new ForecastModel
+                {
+                    Name = "TREND MOMENTUM",
+                    Tag  = "momentum",
+                    Desc = "SMA slope + price ROC, 15-day decay",
+                    F1d  = ProjectTrend(cur, trendRate, 1),
+                    F3d  = ProjectTrend(cur, trendRate, 3),
+                    F1w  = ProjectTrend(cur, trendRate, 7),
+                    F1m  = ProjectTrend(cur, trendRate, 30),
+                    F1y  = ProjectTrend(cur, trendRate, 365),
+                },
+                new ForecastModel
+                {
+                    Name = "MEAN REVERSION",
+                    Tag  = "reversion",
+                    Desc = "Reversion to SMA50, 20-day half-life",
+                    F1d  = ProjectReversion(cur, meanTarget, 1),
+                    F3d  = ProjectReversion(cur, meanTarget, 3),
+                    F1w  = ProjectReversion(cur, meanTarget, 7),
+                    F1m  = ProjectReversion(cur, meanTarget, 30),
+                    F1y  = ProjectReversion(cur, meanTarget, 365),
+                },
+                new ForecastModel
+                {
+                    Name = "INDICATOR SIGNALS",
+                    Tag  = "signal",
+                    Desc = "Score direction × realized vol × √t",
+                    F1d  = ProjectSignal(cur, direction, dailyVol, 1),
+                    F3d  = ProjectSignal(cur, direction, dailyVol, 3),
+                    F1w  = ProjectSignal(cur, direction, dailyVol, 7),
+                    F1m  = ProjectSignal(cur, direction, dailyVol, 30),
+                    F1y  = ProjectSignal(cur, direction, dailyVol, 365),
+                },
+            ],
         };
     }
 }

@@ -147,28 +147,39 @@
             </div>
         </div>
 
-        <div class="fc-panel">
-            <div class="fc-header">
-                <span class="fc-icon">◈</span>
-                <span class="fc-title">PRICE FORECAST</span>
-                <span class="beta-pill">ALGO</span>
-            </div>
-            <div class="fc-grid">
-                <div class="fc-row fc-head">
-                    <span>TIMEFRAME</span><span>TARGET PRICE</span><span>CHANGE</span>
-                </div>
-                @foreach (var row in ForecastRows())
-                {
-                    <div class="fc-row">
-                        <span class="fc-tf">@row.Label</span>
-                        <span class="fc-price">@row.Price</span>
-                        <span class="fc-pct @row.Cls">@row.Pct</span>
+        <div class="fc-section-header">
+            <span class="fc-section-icon">◈</span>
+            <span class="fc-section-title">PRICE FORECAST MODELS</span>
+            <span class="beta-pill">ALGO</span>
+        </div>
+
+        <div class="fc-models-grid">
+            @foreach (var model in _prediction.Forecasts)
+            {
+                <div class="fc-panel fc-@(model.Tag)">
+                    <div class="fc-header">
+                        <span class="fc-dot"></span>
+                        <span class="fc-title">@model.Name</span>
                     </div>
-                }
-            </div>
-            <div class="fc-disclaimer">
-                Momentum + signal extrapolation with mean-reversion decay. Highly speculative — not financial advice.
-            </div>
+                    <div class="fc-desc">@model.Desc</div>
+                    <div class="fc-grid">
+                        <div class="fc-row fc-head">
+                            <span>TIME</span><span>TARGET</span><span>CHG</span>
+                        </div>
+                        @foreach (var row in ForecastRowsFor(model))
+                        {
+                            <div class="fc-row">
+                                <span class="fc-tf">@row.Label</span>
+                                <span class="fc-price">@row.Price</span>
+                                <span class="fc-pct @row.Cls">@row.Pct</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+        <div class="fc-disclaimer">
+            Three independent algorithmic models — all highly speculative. Not financial advice.
         </div>
     }
 
@@ -314,15 +325,15 @@
 
     private record FcRow(string Label, string Price, string Pct, string Cls);
 
-    private IEnumerable<FcRow> ForecastRows()
+    private IEnumerable<FcRow> ForecastRowsFor(ForecastModel model)
     {
         if (_prediction is null) yield break;
         var cur = _prediction.CurrentPrice;
-        yield return MakeRow("1 Day",   cur, _prediction.Forecast1d);
-        yield return MakeRow("3 Days",  cur, _prediction.Forecast3d);
-        yield return MakeRow("1 Week",  cur, _prediction.Forecast1w);
-        yield return MakeRow("1 Month", cur, _prediction.Forecast1m);
-        yield return MakeRow("1 Year",  cur, _prediction.Forecast1y);
+        yield return MakeRow("1 Day",   cur, model.F1d);
+        yield return MakeRow("3 Days",  cur, model.F3d);
+        yield return MakeRow("1 Week",  cur, model.F1w);
+        yield return MakeRow("1 Month", cur, model.F1m);
+        yield return MakeRow("1 Year",  cur, model.F1y);
     }
 
     private static FcRow MakeRow(string label, decimal cur, decimal forecast)
