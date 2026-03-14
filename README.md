@@ -46,6 +46,28 @@ Supports 9 symbols (BTC, ETH, BNB, SOL, XRP, ADA, AVAX, DOGE, LINK) and 5 interv
 
 ---
 
+## Deploy
+
+### One-click deploy to Render (free)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ugniusado/sentinel-crypto)
+
+1. Click the button above (or go to [render.com](https://render.com) → New → Web Service → connect this repo)
+2. Render auto-detects `render.yaml` — just click **Deploy**
+3. First build takes ~5 minutes (downloads .NET 9 SDK + ML.NET packages)
+4. Your app is live at `https://sentinel-crypto.onrender.com` (or similar)
+
+> **Free tier note:** Render spins the service down after 15 minutes of inactivity. First request after sleep takes ~30 seconds to wake up. Upgrade to the $7/mo Starter plan to keep it always-on.
+
+### Self-hosted via Docker
+
+```bash
+docker-compose up --build
+# App → http://localhost:5000
+```
+
+---
+
 ## Architecture
 
 ```

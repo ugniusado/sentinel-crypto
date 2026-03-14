@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: sentinel-crypto
+    runtime: docker
+    dockerfilePath: src/Server/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
