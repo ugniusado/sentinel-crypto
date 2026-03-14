@@ -254,9 +254,9 @@ html, body {
 }
 
 /* Rising price → new digit rolls in from bottom (like old digit rolls upward) */
-.digit-ink.digit-up { animation: roll-up 280ms cubic-bezier(0.16, 1, 0.3, 1); }
+.digit-ink.digit-up { animation: roll-up 600ms cubic-bezier(0.16, 1, 0.3, 1); }
 /* Falling price → new digit rolls in from top */
-.digit-ink.digit-dn { animation: roll-dn 280ms cubic-bezier(0.16, 1, 0.3, 1); }
+.digit-ink.digit-dn { animation: roll-dn 600ms cubic-bezier(0.16, 1, 0.3, 1); }
 
 @keyframes roll-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes roll-dn { from { transform: translateY(-100%); } to { transform: translateY(0); } }
