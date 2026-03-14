@@ -191,24 +191,27 @@ public static class IndicatorService
             _     => 24.0  // 1h default
         };
 
-        // Per-candle momentum: average of last 20 candles % change
-        var window = Math.Min(20, n);
-        double sumPct = 0;
-        for (var i = n - window + 1; i <= n; i++)
-            sumPct += (closes[i] - closes[i - 1]) / closes[i - 1];
-        var perCandleMom = sumPct / window;
+        // Realized daily volatility from last 20 candles (σ of returns → daily)
+        var volWindow = Math.Min(20, n);
+        double sumSq = 0;
+        for (var i = n - volWindow + 1; i <= n; i++)
+        {
+            var r = (closes[i] - closes[i - 1]) / closes[i - 1];
+            sumSq += r * r;
+        }
+        var perCandleVol = Math.Sqrt(sumSq / volWindow);
+        // Convert per-candle σ to daily σ, cap at 7% to prevent absurd alt-coin projections
+        var dailyVol = Math.Min(perCandleVol * Math.Sqrt(cpd), 0.07);
 
-        // Convert to per-day and add score-derived directional bias (max ±0.3%/day)
-        var perDayMom      = perCandleMom * cpd;
-        var scoreBiasDay   = (score / 100.0) * 0.003;
-        var dailyRate      = perDayMom + scoreBiasDay;
+        // Direction is driven entirely by signal score (-1 … +1)
+        // This ensures Buy → upward, Sell → downward, Hold → flat
+        var direction = score / 100.0;
 
-        // Project forward with mean-reversion decay: shorter = more momentum-driven,
-        // longer = heavily dampened toward the signal bias alone
-        static decimal Project(double cur, double rate, double decay, double days) =>
-            (decimal)(cur * Math.Pow(1.0 + rate * decay, days));
-
+        // Project using: cur × (1 + direction × dailyVol × √days)
+        // √t scaling reflects uncertainty growing sub-linearly with time
         var cur = closes[n];
+        static decimal Project(double c, double dir, double vol, double days) =>
+            (decimal)(c * (1.0 + Math.Clamp(dir * vol * Math.Sqrt(days), -0.90, 5.0)));
 
         return new TrendPrediction
         {
@@ -222,11 +225,11 @@ public static class IndicatorService
             LsDirection  = lsDirection,
             LsConfidence = lsConfidence,
             CurrentPrice = (decimal)cur,
-            Forecast1d   = Project(cur, dailyRate, 1.00, 1),
-            Forecast3d   = Project(cur, dailyRate, 0.85, 3),
-            Forecast1w   = Project(cur, dailyRate, 0.65, 7),
-            Forecast1m   = Project(cur, dailyRate, 0.25, 30),
-            Forecast1y   = Project(cur, dailyRate, 0.05, 365),
+            Forecast1d   = Project(cur, direction, dailyVol, 1),
+            Forecast3d   = Project(cur, direction, dailyVol, 3),
+            Forecast1w   = Project(cur, direction, dailyVol, 7),
+            Forecast1m   = Project(cur, direction, dailyVol, 30),
+            Forecast1y   = Project(cur, direction, dailyVol, 365),
         };
     }
 }
