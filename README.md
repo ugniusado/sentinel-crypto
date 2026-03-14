@@ -9,6 +9,41 @@ Real-time cryptocurrency market dashboard built to handle **1,000+ price updates
 
 ---
 
+## Trend Analyzer *(Beta)*
+
+A dedicated `/graph` page with algorithmic technical analysis and three independent price forecast models.
+
+![Trend Analyzer](docs/trend-analyzer.png)
+
+### Indicators
+| Indicator | Details |
+|---|---|
+| RSI (14) | Wilder smoothing, oversold/overbought zones |
+| MACD | 12/26/9 EMA crossover, bullish/bearish momentum |
+| Bollinger Bands | 20-period, 2σ — price position + band width volatility |
+| SMA 20 / 50 | Golden Cross / Death Cross detection |
+
+### Signal Engine
+Multi-factor score (−100 → +100) mapped to **Strong Buy / Buy / Hold / Sell / Strong Sell** with a **Low / Medium / High** risk rating based on volatility and signal conflict.
+
+### Position Bias
+Derived from the signal score — **Long / Short / Neutral** with a confidence level.
+
+### Price Forecast Models
+Three independent algorithms run in parallel and can disagree with each other:
+
+| Model | Algorithm |
+|---|---|
+| **Trend Momentum** | Blends SMA20 slope + price rate-of-change, extrapolated with a 15-day half-life so trends fade rather than run forever |
+| **Mean Reversion** | Projects price drifting back toward SMA50 using exponential decay (20-day half-life — 50% of the gap closes in ~20 days) |
+| **Indicator Signals** | Composite signal score drives direction; realized daily volatility × √t drives magnitude |
+
+Supports 9 symbols (BTC, ETH, BNB, SOL, XRP, ADA, AVAX, DOGE, LINK) and 5 intervals (15M / 1H / 4H / 1D / 1W) via the Binance public REST API.
+
+> ⚠ Algorithmic signals only — not financial advice.
+
+---
+
 ## Architecture
 
 ```
@@ -45,10 +80,13 @@ Blazor WASM Client
 | `PriceStateService` | Singleton state store, fires `OnPricesUpdated` |
 | `CryptoSignalRService` | Manages hub connection with exponential reconnect back-off |
 | `DashboardStateService` | View mode, heatmap, color-blind toggle, favorites |
-| `CoinCard` | `ShouldRender()` gate + ghost tick micro-animation |
+| `CoinCard` | `ShouldRender()` gate + odometer digit-flip animation |
 | `SparklineChart` | SVG area chart, 30s samples, 15min history |
+| `AnimatedPrice` | Digit-slot odometer — rolls up on price rise, down on fall |
 | `CommandPalette` | CMD+K fuzzy coin search |
 | `GlobalShortcuts` | JS interop for keyboard shortcuts |
+| `BinanceHistoricalService` | Fetches OHLCV klines from Binance REST API |
+| `IndicatorService` | SMA, EMA, RSI, MACD, Bollinger Bands + trend prediction |
 
 ---
 
@@ -60,7 +98,7 @@ Blazor WASM Client
 - **`font-variant-numeric: tabular-nums`** — prices don't jitter horizontally as digits change
 
 ### UI / UX
-- **Ghost tick animation** — old price slides out as new price slides in (liquid number feel)
+- **Odometer digit animation** — each digit rolls up or down independently on price change (600ms cubic-bezier)
 - **Live SVG sparklines** — 15-minute price history on medium and large cards
 - **Volume profile bar** — right-edge bar shows relative volume vs 20-sample rolling average
 - **Volatility glow** — cards emit a radial green/red aura that intensifies with price volatility
@@ -69,6 +107,7 @@ Blazor WASM Client
 - **Glassmorphism** — `backdrop-filter: blur(10px)` on all cards
 - **Skeleton screens** — shimmer placeholders while WebSocket connects
 - **Bento grid** — BTC/ETH take 2×2 slots; mid-caps 1×2; alts 1×1
+- **Trend Analyzer** — Chart.js price chart with SMA/BB overlays + RSI sub-chart
 
 ### Accessibility
 - **Color-blind mode** — swaps Green/Red for Blue/Orange via CSS custom property override
@@ -142,21 +181,26 @@ GET http://localhost:5000/health
 ```
 sentinel-crypto/
 ├── docker-compose.yml
+├── docs/
+│   └── trend-analyzer.png      ← Trend Analyzer screenshot
 ├── src/
 │   ├── Server/
-│   │   ├── Hubs/            SignalR hub + client interface
-│   │   ├── Models/          PriceUpdate, AggregatedUpdate, BinanceTicker
-│   │   ├── Services/        Channel buffer, WebSocket worker, aggregator
-│   │   └── Program.cs       DI, CORS, health checks, OTLP tracing
+│   │   ├── Hubs/               SignalR hub + client interface
+│   │   ├── Models/             PriceUpdate, AggregatedUpdate, BinanceTicker
+│   │   ├── Services/           Channel buffer, WebSocket worker, aggregator
+│   │   └── Program.cs          DI, CORS, health checks, OTLP tracing
 │   └── Client/
-│       ├── Components/      CoinCard, HeatmapGrid, SparklineChart,
-│       │                    CommandPalette, Toolbar, GlobalShortcuts
-│       ├── Models/          CoinModel (sparkline + relative volume)
-│       ├── Services/        PriceStateService, CryptoSignalRService,
-│       │                    DashboardStateService
+│       ├── Components/         CoinCard, HeatmapGrid, SparklineChart,
+│       │                       CommandPalette, Toolbar, GlobalShortcuts,
+│       │                       AnimatedPrice
+│       ├── Models/             CoinModel, KlineData
+│       ├── Pages/              Index (dashboard), CryptoGraph (trend analyzer)
+│       ├── Services/           PriceStateService, CryptoSignalRService,
+│       │                       DashboardStateService, BinanceHistoricalService,
+│       │                       IndicatorService
 │       └── wwwroot/
-│           ├── css/app.css  Mission Control dark UI
-│           └── js/app.js    Keyboard shortcut interop
+│           ├── css/app.css     Mission Control dark UI
+│           └── js/app.js       Keyboard shortcut interop + Chart.js wrappers
 ```
 
 ---
