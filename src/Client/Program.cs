@@ -7,6 +7,7 @@ builder.RootComponents.Add<SentinelCrypto.Client.App>("#app");
 builder.Services.AddSingleton<PriceStateService>();
 builder.Services.AddSingleton<CryptoSignalRService>();
 builder.Services.AddSingleton<DashboardStateService>();
+builder.Services.AddSingleton<BinanceHistoricalService>();
 
 builder.Logging.SetMinimumLevel(LogLevel.Warning);
 

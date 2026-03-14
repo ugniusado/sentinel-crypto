@@ -39,5 +39,84 @@ window.SentinelCrypto = {
 
     applyBodyClass(cls, add) {
         document.body.classList.toggle(cls, add);
+    },
+
+    // ── Trend Analyzer charts ──────────────────────────────────────────────
+    renderPriceChart(labels, prices, sma20, sma50, bbUpper, bbLower) {
+        if (window._sc_priceChart) { window._sc_priceChart.destroy(); window._sc_priceChart = null; }
+        const ctx = document.getElementById('price-chart');
+        if (!ctx) return;
+        const mono = "'JetBrains Mono', monospace";
+        window._sc_priceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    { label: 'BB Lower', data: bbLower, borderColor: 'rgba(100,116,139,0.3)', borderWidth: 1, pointRadius: 0, fill: false, order: 5 },
+                    { label: 'BB Upper', data: bbUpper, borderColor: 'rgba(100,116,139,0.3)', borderWidth: 1, pointRadius: 0, fill: '-1', backgroundColor: 'rgba(100,116,139,0.06)', order: 4 },
+                    { label: 'SMA 50',   data: sma50,   borderColor: 'rgba(245,158,11,0.75)', borderWidth: 1.5, borderDash: [5,5], pointRadius: 0, fill: false, order: 3 },
+                    { label: 'SMA 20',   data: sma20,   borderColor: 'rgba(139,92,246,0.75)', borderWidth: 1.5, borderDash: [5,5], pointRadius: 0, fill: false, order: 2 },
+                    { label: 'Price',    data: prices,  borderColor: '#00d4aa', borderWidth: 2, pointRadius: 0, tension: 0.1, fill: false, order: 1 },
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { labels: { color: '#484f58', font: { family: mono, size: 11 }, boxWidth: 18, padding: 14 } },
+                    tooltip: {
+                        backgroundColor: 'rgba(6,8,16,0.93)', borderColor: 'rgba(255,255,255,0.07)', borderWidth: 1,
+                        titleColor: '#f0f4f8', bodyColor: '#8b949e',
+                        titleFont: { family: mono, size: 12 }, bodyFont: { family: mono, size: 11 },
+                        callbacks: {
+                            label: c => c.raw == null ? null :
+                                ` ${c.dataset.label}: ${Number(c.raw).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#484f58', font: { family: mono, size: 10 }, maxTicksLimit: 8, maxRotation: 0 } },
+                    y: { position: 'right', grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#484f58', font: { family: mono, size: 10 }, callback: v => Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }) } }
+                }
+            }
+        });
+    },
+
+    renderRsiChart(labels, rsi) {
+        if (window._sc_rsiChart) { window._sc_rsiChart.destroy(); window._sc_rsiChart = null; }
+        const ctx = document.getElementById('rsi-chart');
+        if (!ctx) return;
+        const mono = "'JetBrains Mono', monospace";
+        const ob70 = labels.map(() => 70);
+        const os30 = labels.map(() => 30);
+        window._sc_rsiChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    { label: 'Overbought 70', data: ob70, borderColor: 'rgba(239,68,68,0.35)',   borderWidth: 1, borderDash: [4,4], pointRadius: 0, fill: false },
+                    { label: 'Oversold 30',   data: os30, borderColor: 'rgba(16,185,129,0.35)', borderWidth: 1, borderDash: [4,4], pointRadius: 0, fill: false },
+                    { label: 'RSI',           data: rsi,  borderColor: '#6366f1', borderWidth: 1.5, pointRadius: 0, fill: false },
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(6,8,16,0.93)', borderColor: 'rgba(255,255,255,0.07)', borderWidth: 1,
+                        titleColor: '#f0f4f8', bodyColor: '#8b949e',
+                        titleFont: { family: mono, size: 12 }, bodyFont: { family: mono, size: 11 },
+                        filter: i => i.datasetIndex === 2,
+                        callbacks: { label: c => ` RSI: ${Number(c.raw).toFixed(1)}` }
+                    }
+                },
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#484f58', font: { family: mono, size: 10 }, maxTicksLimit: 8, maxRotation: 0 } },
+                    y: { position: 'right', min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#484f58', font: { family: mono, size: 10 }, stepSize: 20 } }
+                }
+            }
+        });
     }
 };

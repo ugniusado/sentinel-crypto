@@ -1,0 +1,279 @@
+@page "/graph"
+@page "/graph/{Symbol}"
+@inject BinanceHistoricalService HistoricalService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<PageTitle>Sentinel — Trend Analyzer</PageTitle>
+
+<div class="graph-page">
+
+    <div class="graph-header">
+        <button class="graph-back" @onclick="GoBack">← Dashboard</button>
+        <div class="graph-title-row">
+            <span class="graph-title">TREND ANALYZER</span>
+            <span class="beta-pill">BETA</span>
+        </div>
+        <span class="graph-sub">Algorithmic signals · not financial advice</span>
+    </div>
+
+    <div class="graph-controls">
+        <div class="sym-tabs">
+            @foreach (var sym in _symbols)
+            {
+                <button class="tab-btn @(Symbol == sym ? "active" : "")"
+                        @onclick="() => SelectSymbol(sym)">
+                    @SymLabel(sym)
+                </button>
+            }
+        </div>
+        <div class="iv-tabs">
+            @foreach (var pair in _intervals)
+            {
+                <button class="tab-btn @(_interval == pair.iv ? "active" : "")"
+                        @onclick="() => SelectInterval(pair.iv)">
+                    @pair.label
+                </button>
+            }
+        </div>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="graph-state">
+            <div class="graph-spinner"></div>
+            <span>Loading @Symbol @_interval data…</span>
+        </div>
+    }
+    else if (_error is not null)
+    {
+        <div class="graph-state error">⚠ @_error</div>
+    }
+    else if (_prediction is not null)
+    {
+        <div class="chart-block">
+            <div class="chart-label">PRICE · SMA 20/50 · BOLLINGER BANDS</div>
+            <div class="chart-wrap" style="height:300px">
+                <canvas id="price-chart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-block">
+            <div class="chart-label">RSI (14)</div>
+            <div class="chart-wrap" style="height:110px">
+                <canvas id="rsi-chart"></canvas>
+            </div>
+        </div>
+
+        <div class="ind-strip">
+
+            <div class="ind-card @RsiClass">
+                <span class="ind-name">RSI (14)</span>
+                <span class="ind-val">@RsiDisplay</span>
+                <div class="ind-bar-track">
+                    <div class="ind-bar-fill" style="@RsiBarStyle"></div>
+                    <div class="ind-line os"></div>
+                    <div class="ind-line ob"></div>
+                </div>
+                <span class="ind-hint">@RsiHint</span>
+            </div>
+
+            <div class="ind-card @MacdClass">
+                <span class="ind-name">MACD</span>
+                <span class="ind-val">@MacdDisplay</span>
+                <span class="ind-hint">@(_prediction.MacdDiff >= 0 ? "Bullish momentum" : "Bearish momentum")</span>
+            </div>
+
+            <div class="ind-card">
+                <span class="ind-name">BB Position</span>
+                <span class="ind-val">@BbDisplay</span>
+                <div class="ind-bar-track">
+                    <div class="ind-bar-fill bb" style="@BbBarStyle"></div>
+                </div>
+                <span class="ind-hint">@BbHint</span>
+            </div>
+
+            <div class="ind-card">
+                <span class="ind-name">Signal Score</span>
+                <span class="ind-val">@ScoreDisplay</span>
+                <div class="ind-bar-track">
+                    <div class="ind-bar-fill score" style="@ScoreBarStyle"></div>
+                </div>
+                <span class="ind-hint">–100 bearish · +100 bullish</span>
+            </div>
+
+        </div>
+
+        <div class="pred-panel">
+            <div class="pred-panel-header">
+                <span class="pred-icon">◈</span>
+                <span class="pred-panel-title">AI TREND PREDICTION</span>
+                <span class="beta-pill">BETA</span>
+            </div>
+
+            <div class="pred-body">
+                <div class="pred-signal-block @SignalCss">
+                    <span class="pred-arrow">@SignalArrow</span>
+                    <span class="pred-signal-label">@_prediction.Signal</span>
+                </div>
+
+                <div class="pred-risk risk-@(_prediction.Risk.ToLower())">
+                    <span class="risk-dot"></span>
+                    <span>RISK · @(_prediction.Risk.ToUpper())</span>
+                </div>
+
+                <div class="pred-reasons">
+                    @foreach (var r in _prediction.Reasons)
+                    {
+                        <div class="pred-reason">· @r</div>
+                    }
+                </div>
+            </div>
+
+            <div class="pred-disclaimer">
+                ⚠ Algorithmic signals only. This tool does not constitute financial advice.
+                Always do your own research before making investment decisions.
+            </div>
+        </div>
+    }
+
+</div>
+
+@code {
+    [Parameter] public string Symbol { get; set; } = "BTCUSDT";
+
+    private string           _interval = "1h";
+    private bool             _loading  = true;
+    private string?          _error;
+    private TrendPrediction? _prediction;
+    private bool             _chartsReady;
+
+    private string[]  _labels   = [];
+    private double?[] _prices   = [], _sma20 = [], _sma50 = [],
+                      _bbUpper  = [], _bbLower = [], _rsiVals = [];
+
+    private static readonly string[] _symbols =
+        ["BTCUSDT","ETHUSDT","BNBUSDT","SOLUSDT","XRPUSDT","ADAUSDT","AVAXUSDT","DOGEUSDT","LINKUSDT"];
+
+    private static readonly (string iv, string label)[] _intervals =
+        [("15m","15M"),("1h","1H"),("4h","4H"),("1d","1D"),("1w","1W")];
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_loading && !_chartsReady && _prediction is not null)
+        {
+            _chartsReady = true;
+            await JS.InvokeVoidAsync("SentinelCrypto.renderPriceChart",
+                _labels, _prices, _sma20, _sma50, _bbUpper, _bbLower);
+            await JS.InvokeVoidAsync("SentinelCrypto.renderRsiChart",
+                _labels, _rsiVals);
+        }
+    }
+
+    private async Task LoadData()
+    {
+        _loading     = true;
+        _error       = null;
+        _chartsReady = false;
+        StateHasChanged();
+
+        try
+        {
+            var klines = await HistoricalService.GetKlinesAsync(Symbol, _interval, 200);
+            var closes = klines.Select(k => (double)k.Close).ToArray();
+
+            var sma20 = IndicatorService.Sma(closes, 20);
+            var sma50 = IndicatorService.Sma(closes, 50);
+            var rsi   = IndicatorService.Rsi(closes, 14);
+            var (macd, sig, _)   = IndicatorService.Macd(closes);
+            var (bbU, bbM, bbL)  = IndicatorService.BollingerBands(closes, 20);
+
+            _prediction = IndicatorService.Predict(closes, rsi, macd, sig, bbU, bbL, bbM, sma20, sma50);
+
+            var take = Math.Min(closes.Length, 100);
+            var skip = closes.Length - take;
+
+            static double?[] Trim(double[] a, int s, int t) =>
+                a.Skip(s).Take(t).Select(x => double.IsNaN(x) ? (double?)null : x).ToArray();
+
+            _labels  = klines.Skip(skip).Take(take).Select(k => FormatLabel(k.OpenTime)).ToArray();
+            _prices  = closes.Skip(skip).Take(take).Select(x => (double?)x).ToArray();
+            _sma20   = Trim(sma20, skip, take);
+            _sma50   = Trim(sma50, skip, take);
+            _bbUpper = Trim(bbU,   skip, take);
+            _bbLower = Trim(bbL,   skip, take);
+            _rsiVals = Trim(rsi,   skip, take);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load market data: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task SelectSymbol(string sym)
+    {
+        Symbol = sym;
+        await LoadData();
+        StateHasChanged();
+    }
+
+    private async Task SelectInterval(string iv)
+    {
+        _interval = iv;
+        await LoadData();
+        StateHasChanged();
+    }
+
+    private void GoBack() => Nav.NavigateTo("/");
+    private static string SymLabel(string sym) => sym.Replace("USDT", "");
+
+    private string FormatLabel(DateTime dt) =>
+        _interval is "1d" or "1w" ? dt.ToString("MMM dd") : dt.ToString("MM/dd HH:mm");
+
+    // Pre-computed display values (avoids ToString("F0") inside HTML attributes)
+    private string RsiDisplay   => _prediction is null ? "" : _prediction.Rsi.ToString("F1");
+    private string RsiBarStyle  => _prediction is null ? "" : $"width:{(int)_prediction.Rsi}%";
+    private string MacdDisplay  => _prediction is null ? "" :
+        (_prediction.MacdDiff >= 0 ? "+" : "") + _prediction.MacdDiff.ToString("F4");
+    private string BbDisplay    => _prediction is null ? "" : ((int)_prediction.BbPosition) + "%";
+    private string BbBarStyle   => _prediction is null ? "" : $"width:{(int)_prediction.BbPosition}%";
+    private string ScoreDisplay => _prediction is null ? "" :
+        (_prediction.Score > 0 ? "+" : "") + _prediction.Score;
+    private string ScoreBarStyle => _prediction is null ? "" : $"width:{Math.Abs(_prediction.Score)}%";
+
+    private string RsiClass  => _prediction is null ? "" :
+        _prediction.Rsi < 30 ? "ind-bull" : _prediction.Rsi > 70 ? "ind-bear" : "";
+    private string MacdClass => _prediction?.MacdDiff >= 0 ? "ind-bull" : "ind-bear";
+
+    private string RsiHint => _prediction is null ? "" :
+        _prediction.Rsi < 30 ? "Oversold" :
+        _prediction.Rsi < 45 ? "Neutral-Low" :
+        _prediction.Rsi < 55 ? "Neutral" :
+        _prediction.Rsi < 70 ? "Neutral-High" : "Overbought";
+
+    private string BbHint => _prediction is null ? "" :
+        _prediction.BbPosition < 20 ? "Near lower band" :
+        _prediction.BbPosition < 40 ? "Lower half" :
+        _prediction.BbPosition < 60 ? "Middle range" :
+        _prediction.BbPosition < 80 ? "Upper half" : "Near upper band";
+
+    private string SignalCss => _prediction?.Signal switch
+    {
+        "Strong Buy"  => "sig-strong-buy",  "Buy"  => "sig-buy",
+        "Strong Sell" => "sig-strong-sell", "Sell" => "sig-sell",
+        _             => "sig-hold"
+    };
+
+    private string SignalArrow => _prediction?.Signal switch
+    {
+        "Strong Buy" or "Buy"   => "▲",
+        "Sell" or "Strong Sell" => "▼",
+        _                       => "—"
+    };
+}
