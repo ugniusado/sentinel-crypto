@@ -13,7 +13,9 @@ Real-time cryptocurrency market dashboard built to handle **1,000+ price updates
 
 A dedicated `/graph` page with algorithmic technical analysis and three independent price forecast models.
 
-![Trend Analyzer](docs/trend-analyzer.png)
+![Trend Analyzer — Charts](docs/trend-analyzer-charts.png)
+
+![Trend Analyzer — Forecast Models](docs/trend-analyzer-forecast.png)
 
 ### Indicators
 | Indicator | Details |
@@ -182,7 +184,8 @@ GET http://localhost:5000/health
 sentinel-crypto/
 ├── docker-compose.yml
 ├── docs/
-│   └── trend-analyzer.png      ← Trend Analyzer screenshot
+│   ├── trend-analyzer-charts.png   ← Charts + indicators screenshot
+│   └── trend-analyzer-forecast.png ← 3-model forecast screenshot
 ├── src/
 │   ├── Server/
 │   │   ├── Hubs/               SignalR hub + client interface
