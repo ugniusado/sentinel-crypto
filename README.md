@@ -7,15 +7,13 @@ Real-time cryptocurrency market dashboard built to handle **1,000+ price updates
 ![SignalR](https://img.shields.io/badge/SignalR-Redis%20Backplane-red?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
 
+**Live demo:** https://sentinel-crypto.onrender.com
+
 ---
 
 ## Trend Analyzer *(Beta)*
 
 A dedicated `/graph` page with algorithmic technical analysis and three independent price forecast models.
-
-![Trend Analyzer — Forecast Models](docs/trend-analyzer-forecast.png)
-
-![Trend Analyzer — Charts](docs/trend-analyzer-charts.png)
 
 ### Indicators
 | Indicator | Details |
@@ -205,9 +203,6 @@ GET http://localhost:5000/health
 ```
 sentinel-crypto/
 ├── docker-compose.yml
-├── docs/
-│   ├── trend-analyzer-charts.png   ← Charts + indicators screenshot
-│   └── trend-analyzer-forecast.png ← 3-model forecast screenshot
 ├── src/
 │   ├── Server/
 │   │   ├── Hubs/               SignalR hub + client interface
