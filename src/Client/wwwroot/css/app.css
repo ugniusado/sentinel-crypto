@@ -233,7 +233,7 @@ html, body {
   display: inline-flex; align-items: center;
   font-family: var(--font-mono); font-variant-numeric: tabular-nums;
   font-weight: 600; letter-spacing: -.02em; color: var(--text-1);
-  font-size: 1.35rem;
+  font-size: 1.5rem;
 }
 .card-large  .anim-price { font-size: 1.85rem; }
 .card-medium .anim-price { font-size: 1.5rem; }
@@ -478,9 +478,10 @@ html, body {
 .pred-body { display:flex; align-items:flex-start; flex-wrap:wrap; gap:1.5rem; padding:1.2rem; }
 
 .pred-signal-block {
-  display:flex; align-items:center; gap:.5rem;
-  padding:.6rem 1.1rem; border-radius:var(--r-card);
-  border:1px solid var(--border); min-width:150px;
+  display:inline-flex; align-items:center; gap:.5rem;
+  padding:.4rem 1rem; border-radius:30px;
+  border:1px solid var(--border); min-width:unset;
+  cursor:default; user-select:none; pointer-events:none;
 }
 .pred-arrow        { font-size:1.4rem; }
 .pred-signal-label { font-family:var(--font-mono); font-size:1rem; font-weight:700; }
@@ -511,7 +512,7 @@ html, body {
   display:flex; flex-direction:column; gap:.35rem; flex:1; min-width:220px;
 }
 .pred-reason {
-  font-family:var(--font-mono); font-size:.72rem; color:var(--text-2); line-height:1.5;
+  font-family:var(--font-mono); font-size:.75rem; color:#b0bac6; line-height:1.6;
 }
 
 .pred-disclaimer {
@@ -608,15 +609,88 @@ html, body {
 }
 @keyframes spin { to { transform:rotate(360deg); } }
 
-/* ── Responsive ──────────────────────────────────────────────────────────── */
-@media (max-width: 800px) {
-  .fc-models-grid { grid-template-columns:1fr; }
+/* ── Chart heights (responsive via class, not inline style) ─────────────── */
+.chart-main { height: 300px; }
+.chart-rsi  { height: 110px; }
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+
+/* Tablet */
+@media (max-width: 900px) {
+  .fc-models-grid { grid-template-columns: 1fr; }
 }
+
+/* Mobile landscape + small tablet */
+@media (max-width: 768px) {
+  .sentinel-main { padding: 1rem; }
+  .ind-strip { grid-template-columns: repeat(2, 1fr); }
+  .heatmap-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+}
+
+/* Mobile portrait */
 @media (max-width: 640px) {
-  .heatmap-grid       { grid-template-columns:repeat(2, 1fr); }
-  .card-large         { grid-column:span 2; }
-  .toolbar-stats      { display:none; }
+  /* Header — collapse gracefully */
+  .sentinel-header { padding: .5rem .875rem; gap: .6rem; }
+  .brand-sub        { display: none; }
+  .meta-label       { display: none; }
+  .header-meta      { gap: .4rem; }
+
+  /* Toolbar — horizontal scroll, no wrap */
+  .sentinel-toolbar { padding: .4rem .875rem; overflow-x: auto; }
+  .toolbar          { flex-wrap: nowrap; gap: .4rem; min-width: max-content; }
+  .toolbar-stats    { display: none; }
+
+  /* Main */
+  .sentinel-main { padding: .875rem; }
+
+  /* Cards — 2 columns */
+  .heatmap-grid     { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 130px; }
+  .card-large       { grid-column: span 2; }
+  .anim-price       { font-size: 1.3rem; }
+  .card-large  .anim-price { font-size: 1.6rem; }
+  .card-medium .anim-price { font-size: 1.4rem; }
+
+  /* Graph page */
+  .graph-page       { padding: .875rem .875rem 3rem; gap: .875rem; }
+  .graph-controls   { gap: .5rem; flex-direction: column; }
+  .sym-tabs, .iv-tabs {
+    overflow-x: auto; flex-wrap: nowrap;
+    padding-bottom: .25rem; scrollbar-width: none;
+  }
+  .sym-tabs::-webkit-scrollbar,
+  .iv-tabs::-webkit-scrollbar { display: none; }
+
+  /* Charts */
+  .chart-main { height: 200px; }
+  .chart-rsi  { height: 75px; }
+  .chart-block { padding: .75rem .75rem .5rem; }
+
+  /* Indicator strip */
+  .ind-strip { grid-template-columns: repeat(2, 1fr); gap: .5rem; }
+
+  /* Prediction panel */
+  .pred-body { flex-direction: column; gap: .75rem; }
+  .pred-reasons { min-width: unset; }
+
+  /* Long/short panel */
+  .ls-panel { flex-direction: column; gap: .35rem; align-items: flex-start; }
+  .ls-right  { align-items: flex-start; }
+  .ls-dir    { font-size: 1.1rem; }
+
+  /* Forecast models */
+  .fc-models-grid { grid-template-columns: 1fr; }
+  .fc-row { padding: .4rem .75rem; }
 }
+
+/* Extra small phones */
+@media (max-width: 400px) {
+  .brand-name  { font-size: .88rem; }
+  .graph-title { font-size: .95rem; }
+  .tab-btn     { font-size: .65rem; padding: .25rem .5rem; }
+  .ind-val     { font-size: 1.1rem; }
+}
+
+/* Large desktops */
 @media (min-width: 1400px) {
-  .heatmap-grid { grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); }
+  .heatmap-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
 }
