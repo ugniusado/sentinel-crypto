@@ -1,5 +1,13 @@
 window.SentinelCrypto = {
 
+    // ── Platform detection ─────────────────────────────────────────────────
+    isMac() {
+        return /^Mac/.test(navigator.platform) && navigator.maxTouchPoints === 0;
+    },
+    isTouch() {
+        return navigator.maxTouchPoints > 1;
+    },
+
     // ── Keyboard shortcuts ─────────────────────────────────────────────────
     registerShortcuts(dotnetRef) {
         const handler = (e) => {

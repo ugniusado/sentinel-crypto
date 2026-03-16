@@ -38,7 +38,7 @@ Three independent algorithms run in parallel and can disagree with each other:
 | **Mean Reversion** | Projects price drifting back toward SMA50 using exponential decay (20-day half-life — 50% of the gap closes in ~20 days) |
 | **Indicator Signals** | Composite signal score drives direction; realized daily volatility × √t drives magnitude |
 
-Supports 9 symbols (BTC, ETH, BNB, SOL, XRP, ADA, AVAX, DOGE, LINK) and 5 intervals (15M / 1H / 4H / 1D / 1W) via the Binance public REST API.
+Supports 9 symbols (BTC, ETH, BNB, SOL, XRP, ADA, AVAX, DOGE, LINK) and 6 intervals (15M / 1H / 4H / 1D / 1W / 1Y) via the Binance public REST API.
 
 > ⚠ Algorithmic signals only — not financial advice.
 
@@ -111,6 +111,7 @@ Blazor WASM Client
 
 ### Accessibility
 - **Color-blind mode** — swaps Green/Red for Blue/Orange via CSS custom property override
+- **Mobile-responsive** — full layout adapts from 400px phones to 4K desktops; charts resize, tabs scroll horizontally, toolbar collapses
 
 ### Navigation
 | Shortcut | Action |

@@ -32,9 +32,12 @@
 
         <button class="toggle-btn cmd-trigger"
                 @onclick="Dashboard.OpenCommandPalette"
-                title="Search coins (⌘K)">
+                title="Search coins (@_cmdKey)">
             <span>⌕</span> SEARCH
-            <kbd>⌘K</kbd>
+            @if (!_isTouch)
+            {
+                <kbd>@_cmdKey</kbd>
+            }
         </button>
     </div>
 
@@ -54,10 +57,24 @@
         ("ALERTS",    ViewMode.PanicAlerts, "4"),
     ];
 
+    private string _cmdKey  = "⌘K";
+    private bool   _isTouch = false;
+
     protected override void OnInitialized()
     {
         Dashboard.OnStateChanged  += Refresh;
         PriceState.OnPricesUpdated += Refresh;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _isTouch = await JS.InvokeAsync<bool>("SentinelCrypto.isTouch");
+            var isMac = await JS.InvokeAsync<bool>("SentinelCrypto.isMac");
+            _cmdKey = isMac ? "⌘K" : "Ctrl+K";
+            StateHasChanged();
+        }
     }
 
     private async Task ToggleColorBlind()
